@@ -1,8 +1,9 @@
 use crate::message::Message;
+use crate::prefix::Prefix;
 
 #[test]
 fn test_tags() {
-    let message = Message::new("@tag1=value1;tag2=value2 CMD");
+    let message = Message::from("@tag1=value1;tag2=value2 CMD");
 
     let mut tags = message.tags().unwrap();
     let (key, val) = tags.next().unwrap();
@@ -13,7 +14,7 @@ fn test_tags() {
     assert_eq!(val, "value2");
     assert!(tags.next().is_none());
 
-    let message = Message::new("@tag1=value1 CMD");
+    let message = Message::from("@tag1=value1 CMD");
 
     let mut tags = message.tags().unwrap();
     let (key, val) = tags.next().unwrap();
@@ -21,7 +22,7 @@ fn test_tags() {
     assert_eq!(val, "value1");
     assert!(tags.next().is_none());
 
-    let message = Message::new("@tag1=value1;tag2=value2 :name CMD :trailing");
+    let message = Message::from("@tag1=value1;tag2=value2 :name CMD :trailing");
 
     let mut tags = message.tags().unwrap();
     let (key, val) = tags.next().unwrap();
@@ -34,7 +35,7 @@ fn test_tags() {
 
     assert!(message.prefix().is_some());
 
-    let message = Message::new("@tag1=value1;tag2=value2 CMD :trailing");
+    let message = Message::from("@tag1=value1;tag2=value2 CMD :trailing");
 
     let mut tags = message.tags().unwrap();
     let (key, val) = tags.next().unwrap();
@@ -50,7 +51,7 @@ fn test_tags() {
 
 #[test]
 fn test_parse() {
-    let message = Message::new(":name!user@host CMD param1 param2 :trailing");
+    let message = Message::from(":name!user@host CMD param1 param2 :trailing");
 
     let prefix = message.prefix().unwrap();
     assert_eq!(prefix.name(), "name");
@@ -69,7 +70,7 @@ fn test_parse() {
 
 #[test]
 fn test_without_prefix() {
-    let message = Message::new("CMD param1 param2 :trailing");
+    let message = Message::from("CMD param1 param2 :trailing");
 
     let prefix = message.prefix();
     assert!(prefix.is_none());
@@ -86,7 +87,7 @@ fn test_without_prefix() {
 
 #[test]
 fn test_command_only() {
-    let message = Message::new("CMD");
+    let message = Message::from("CMD");
 
     assert!(message.prefix().is_none());
 
@@ -97,7 +98,7 @@ fn test_command_only() {
 
 #[test]
 fn test_cmd_and_trailing() {
-    let message = Message::new("CMD :trailing");
+    let message = Message::from("CMD :trailing");
 
     assert!(message.prefix().is_none());
 
@@ -111,7 +112,7 @@ fn test_cmd_and_trailing() {
 
 #[test]
 fn test_cmd_and_param() {
-    let message = Message::new("CMD param1");
+    let message = Message::from("CMD param1");
 
     assert!(message.prefix().is_none());
 
@@ -126,7 +127,7 @@ fn test_cmd_and_param() {
 
 #[test]
 fn test_prefix() {
-    let message = Message::new(":name CMD");
+    let message = Message::from(":name CMD");
 
     let prefix = message.prefix().unwrap();
     assert_eq!(prefix.name(), "name");
@@ -137,7 +138,7 @@ fn test_prefix() {
 
     assert!(message.params().is_none());
 
-    let message = Message::new(":name@host CMD");
+    let message = Message::from(":name@host CMD");
 
     let prefix = message.prefix().unwrap();
     assert_eq!(prefix.name(), "name");
@@ -147,4 +148,16 @@ fn test_prefix() {
     assert_eq!(message.command(), "CMD");
 
     assert!(message.params().is_none());
+}
+
+#[test]
+fn test_message_builder() {
+    let message = Message::builder("CMD")
+        .tag("key1", "key2")
+        .prefix(Prefix::builder("name")
+            .user("user", "host")
+        ).param("param1").param("param2")
+        .trailing("trailing")
+        .build();
+    assert_eq!(message.to_string(), "@key1=key2 :name!user@host CMD param1 param2 :trailing")
 }
