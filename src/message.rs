@@ -5,6 +5,38 @@ use crate::prefix::{Prefix, PrefixBuilder};
 use crate::tags::Tags;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
+///
+/// # Examples
+/// ```
+/// use irc_rust::message::Message;
+/// let message = Message::new("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+/// assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+/// ```
+///
+/// ```
+/// use irc_rust::message::Message;
+/// use irc_rust::prefix::Prefix;
+///
+/// let message = Message::builder()
+///         .tag("key1", "value1")
+///         .tag("key2", "value2")
+///         .prefix(Prefix::builder("name")
+///             .user("user")
+///             .host("host")
+///         )
+///         .command("CMD")
+///         .param("param1").param("param2")
+///         .trailing("trailing")
+///         .build();
+/// match message {
+///     Ok(mssg) => {
+///         let tags = mssg.tags().unwrap();
+///         println!("key1={}", tags["key1"]) // Prints 'key1=value1'
+///     }
+///     Err(e) => println!("message building failed: {}", e)
+/// }
+///
+/// ```
 pub struct Message {
     raw: String
 }
