@@ -1,4 +1,4 @@
-# irc-rust [![https://docs.rs/irc-rust/badge.svg](https://docs.rs/irc-rust/badge.svg)](https://docs.rs/irc-rust)
+# irc-rust [![https://docs.rs/irc-rust/badge.svg](https://docs.rs/irc-rust/badge.svg)](https://docs.rs/irc-rust) [![crates.io](https://img.shields.io/crates/v/irc-rust.svg)](https://crates.io/crates/irc-rust)
 IRC Helper easing the access and creation of IRC Messages.
 
 ## Basic Usage
