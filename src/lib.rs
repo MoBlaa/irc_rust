@@ -1,6 +1,44 @@
 pub mod irc_rust {
     use std::str::SplitWhitespace;
 
+    pub struct Tags<'a> {
+        pub raw: &'a str,
+        cursor: usize,
+        done: bool,
+    }
+
+    impl<'a> Tags<'a> {
+        pub fn new(raw: &'a str) -> Tags<'a> {
+            Tags {
+                raw,
+                cursor: 0,
+                done: false,
+            }
+        }
+    }
+
+    impl<'a> Iterator for Tags<'a> {
+        type Item = (&'a str, &'a str);
+
+        fn next(&mut self) -> Option<(&'a str, &'a str)> {
+            if self.done {
+                return None;
+            }
+            let next: &'a str = match self.raw[self.cursor..].find(';') {
+                Some(end) => {
+                    let result = &self.raw[self.cursor..self.cursor + end];
+                    self.cursor = self.cursor + end + 1;
+                    result
+                }
+                None => {
+                    self.done = true;
+                    &self.raw[self.cursor..]
+                }
+            };
+            next.find('=').and_then(|index| Some((&next[..index], &next[index + 1..])))
+        }
+    }
+
     pub struct Prefix<'a> {
         pub raw: &'a str,
     }
@@ -39,7 +77,7 @@ pub mod irc_rust {
         pub raw: &'a str,
         split: SplitWhitespace<'a>,
         trailing: Option<&'a str>,
-        done: bool
+        done: bool,
     }
 
     impl<'a> Params<'a> {
@@ -55,7 +93,7 @@ pub mod irc_rust {
                 raw,
                 split,
                 trailing,
-                done: false
+                done: false,
             }
         }
 
@@ -85,7 +123,6 @@ pub mod irc_rust {
                     }
                 }
             }
-
         }
     }
 
@@ -94,18 +131,33 @@ pub mod irc_rust {
     }
 
     impl<'a> Message<'a> {
-        pub fn prefix(&self) -> Option<Prefix<'a>> {
-            if self.raw.starts_with(':') {
-                match self.raw.find(' ') {
-                    Some(index) => Some(Prefix {
-                        raw: &self.raw[1..index],
-                    }),
-                    None => Some(Prefix {
-                        raw: &self.raw[1..]
-                    })
-                }
+        pub fn tags(&self) -> Option<Tags<'a>> {
+            if self.raw.starts_with('@') {
+                self.raw.find(' ').and_then(|index| Some(Tags::new(&self.raw[1..index])))
             } else {
                 None
+            }
+        }
+
+        pub fn prefix(&self) -> Option<Prefix<'a>> {
+            let offset = self.tags()
+                // Set offset if tags exist
+                .and_then(|tags| {
+                    // + '@' + ' '
+                    Some(tags.raw.len() + 2)
+                }).unwrap_or(0);
+            match self.raw.chars().nth(offset) {
+                Some(':') => {
+                    match self.raw[offset..].find(' ') {
+                        Some(index) => Some(Prefix {
+                            raw: &self.raw[offset + 1..offset + index],
+                        }),
+                        None => Some(Prefix {
+                            raw: &self.raw[offset + 1..]
+                        })
+                    }
+                }
+                _ => None
             }
         }
 
@@ -144,6 +196,62 @@ pub mod irc_rust {
 #[cfg(test)]
 mod test {
     use crate::irc_rust::Message;
+
+    #[test]
+    fn test_tags() {
+        let message = Message {
+            raw: "@tag1=value1;tag2=value2 CMD"
+        };
+
+        let mut tags = message.tags().unwrap();
+        let (key, val) = tags.next().unwrap();
+        assert_eq!(key, "tag1");
+        assert_eq!(val, "value1");
+        let (key, val) = tags.next().unwrap();
+        assert_eq!(key, "tag2");
+        assert_eq!(val, "value2");
+        assert!(tags.next().is_none());
+
+        let message = Message {
+            raw: "@tag1=value1 CMD"
+        };
+
+        let mut tags = message.tags().unwrap();
+        let (key, val) = tags.next().unwrap();
+        assert_eq!(key, "tag1");
+        assert_eq!(val, "value1");
+        assert!(tags.next().is_none());
+
+        let message = Message {
+            raw: "@tag1=value1;tag2=value2 :name CMD :trailing"
+        };
+
+        let mut tags = message.tags().unwrap();
+        let (key, val) = tags.next().unwrap();
+        assert_eq!(key, "tag1");
+        assert_eq!(val, "value1");
+        let (key, val) = tags.next().unwrap();
+        assert_eq!(key, "tag2");
+        assert_eq!(val, "value2");
+        assert!(tags.next().is_none());
+
+        assert!(message.prefix().is_some());
+
+        let message = Message {
+            raw: "@tag1=value1;tag2=value2 CMD :trailing"
+        };
+
+        let mut tags = message.tags().unwrap();
+        let (key, val) = tags.next().unwrap();
+        assert_eq!(key, "tag1");
+        assert_eq!(val, "value1");
+        let (key, val) = tags.next().unwrap();
+        assert_eq!(key, "tag2");
+        assert_eq!(val, "value2");
+        assert!(tags.next().is_none());
+
+        assert!(message.prefix().is_none());
+    }
 
     #[test]
     fn test_parse() {
