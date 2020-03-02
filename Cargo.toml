@@ -1,5 +1,5 @@
 [package]
-name = "irc_rust"
+name = "irc-rust"
 version = "0.1.1"
 authors = ["mo_blaa <moblaa@gmx.net>"]
 edition = "2018"
