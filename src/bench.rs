@@ -12,11 +12,15 @@ fn bench_parse(b: &mut Bencher) {
     b.iter(|| {
         let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 
+        assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+        // 42 ns/iter
+
         let tags = message.tags().unwrap();
         let val = &tags["key1"];
         assert_eq!(val, "value1");
         let val = &tags["key2"];
         assert_eq!(val, "value2");
+        // 189 ns/iter
 
         let mut tags = message.tags().unwrap().iter();
         let (key, val) = tags.next().unwrap();
@@ -25,13 +29,16 @@ fn bench_parse(b: &mut Bencher) {
         let (key, val) = tags.next().unwrap();
         assert_eq!(key, "key2");
         assert_eq!(val, "value2");
+        // 319 ns/iter
 
         let prefix = message.prefix().unwrap();
         assert_eq!(prefix.name(), "name");
         assert_eq!(prefix.user().unwrap(), "user");
         assert_eq!(prefix.host().unwrap(), "host");
+        // 519 ns/iter
 
         assert_eq!(message.command(), "CMD");
+        // 585 ns/iter
 
         let params = message.params().unwrap();
         let mut iter = params.iter();
@@ -39,6 +46,7 @@ fn bench_parse(b: &mut Bencher) {
         assert_eq!(iter.next().unwrap(), "param2");
         assert!(iter.next().is_none());
         assert_eq!(params.trailing.unwrap(), "trailing")
+        // 793 ns/iter
     })
 }
 
@@ -62,4 +70,19 @@ fn bench_tag_index(b: &mut Bencher) {
         let val = &tags[&skey];
         assert_eq!(val, format!("value{}", ikey));
     })
+}
+
+#[bench]
+fn bench_params(b: &mut Bencher) {
+    let mut str = String::from("CMD");
+    for _ in 0..100 {
+        str.push_str(" param");
+    }
+    let message = Message::new(str);
+
+    b.iter(|| {
+        for param in message.params().unwrap().iter() {
+            assert_eq!(param, "param")
+        }
+    });
 }
