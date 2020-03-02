@@ -1,6 +1,9 @@
+extern crate rand;
 extern crate test;
 
 use test::Bencher;
+
+use rand::Rng;
 
 use crate::message::Message;
 
@@ -36,5 +39,27 @@ fn bench_parse(b: &mut Bencher) {
         assert_eq!(iter.next().unwrap(), "param2");
         assert!(iter.next().is_none());
         assert_eq!(params.trailing.unwrap(), "trailing")
+    })
+}
+
+#[bench]
+fn bench_tag_index(b: &mut Bencher) {
+    let mut str = String::from("@");
+    for i in 0..1000 {
+        str = format!("{}key{}=value{}", str, i, i);
+        if i != 1000 {
+            str.push(';');
+        }
+    }
+    str.push_str(" CMD");
+    let message = Message::new(str);
+    let tags = message.tags().unwrap();
+
+    b.iter(|| {
+        let mut rng = rand::thread_rng();
+        let ikey = rng.gen_range(0, 1000);
+        let skey = format!("key{}", ikey);
+        let val = &tags[&skey];
+        assert_eq!(val, format!("value{}", ikey));
     })
 }
