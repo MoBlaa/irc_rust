@@ -1,41 +1,49 @@
+use std::ops::Index;
+
 pub struct Tags<'a> {
     raw: &'a str,
-    cursor: usize,
-    done: bool,
 }
 
 impl<'a> Tags<'a> {
     pub fn new(raw: &'a str) -> Tags<'a> {
         Tags {
             raw,
-            cursor: 0,
-            done: false,
         }
     }
 
     pub fn len(&self) -> usize {
         self.raw.len()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item=(&'a str, &'a str)> {
+        self.raw.split(';')
+            .map(|kv| {
+                let mut split = kv.split('=');
+                (split.next().unwrap(), split.next().unwrap())
+            })
+    }
+
+    // Search for the key and return start and end of the value
+    fn find(&self, key: &'a str) -> Option<(usize, usize)> {
+        self.raw.find(key)
+            .map(|start| {
+                start + key.len() + 1
+            })
+            .and_then(|start| {
+                self.raw[start..].find(';')
+                    .or(self.raw[start..].find(' '))
+                    .or(Some(self.raw.len() - start))
+                    .map(|end| (start, start + end))
+            })
+    }
 }
 
-impl<'a> Iterator for Tags<'a> {
-    type Item = (&'a str, &'a str);
+impl<'a> Index<&'a str> for Tags<'a> {
+    type Output = str;
 
-    fn next(&mut self) -> Option<(&'a str, &'a str)> {
-        if self.done {
-            return None;
-        }
-        let next: &'a str = match self.raw[self.cursor..].find(';') {
-            Some(end) => {
-                let result = &self.raw[self.cursor..self.cursor + end];
-                self.cursor = self.cursor + end + 1;
-                result
-            }
-            None => {
-                self.done = true;
-                &self.raw[self.cursor..]
-            }
-        };
-        next.find('=').and_then(|index| Some((&next[..index], &next[index + 1..])))
+    fn index(&self, key: &'a str) -> &Self::Output {
+        // Find the key
+        let (start, end) = self.find(key).unwrap();
+        &self.raw[start..end]
     }
 }

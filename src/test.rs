@@ -5,7 +5,13 @@ use crate::prefix::Prefix;
 fn test_tags() {
     let message = Message::from("@tag1=value1;tag2=value2 CMD");
 
-    let mut tags = message.tags().unwrap();
+    let tags = message.tags().unwrap();
+    let val = &tags["tag1"];
+    assert_eq!(val, "value1");
+    let val = &tags["tag2"];
+    assert_eq!(val, "value2");
+
+    let mut tags = message.tags().unwrap().iter();
     let (key, val) = tags.next().unwrap();
     assert_eq!(key, "tag1");
     assert_eq!(val, "value1");
@@ -16,7 +22,7 @@ fn test_tags() {
 
     let message = Message::from("@tag1=value1 CMD");
 
-    let mut tags = message.tags().unwrap();
+    let mut tags = message.tags().unwrap().iter();
     let (key, val) = tags.next().unwrap();
     assert_eq!(key, "tag1");
     assert_eq!(val, "value1");
@@ -24,7 +30,7 @@ fn test_tags() {
 
     let message = Message::from("@tag1=value1;tag2=value2 :name CMD :trailing");
 
-    let mut tags = message.tags().unwrap();
+    let mut tags = message.tags().unwrap().iter();
     let (key, val) = tags.next().unwrap();
     assert_eq!(key, "tag1");
     assert_eq!(val, "value1");
@@ -37,7 +43,7 @@ fn test_tags() {
 
     let message = Message::from("@tag1=value1;tag2=value2 CMD :trailing");
 
-    let mut tags = message.tags().unwrap();
+    let mut tags = message.tags().unwrap().iter();
     let (key, val) = tags.next().unwrap();
     assert_eq!(key, "tag1");
     assert_eq!(val, "value1");
