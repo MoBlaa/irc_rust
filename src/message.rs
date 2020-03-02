@@ -121,7 +121,7 @@ impl<'a> MessageBuilder<'a> {
 
     pub fn build(self) -> Message {
         let mut str = if !self.tags.is_empty() {
-            format!("@{} ", self.tags.join("="))
+            format!("@{} ", self.tags.join(";"))
         } else {
             String::new()
         };
