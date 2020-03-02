@@ -2,27 +2,31 @@ use crate::params::Params;
 use crate::prefix::{Prefix, PrefixBuilder};
 use crate::tags::Tags;
 
+/// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 pub struct Message {
     raw: String
 }
 
 impl Message {
+    /// Create a new Message from the given string. Expects the string to be in a valid irc format.
     pub fn new(value: &str) -> Message {
         Message {
             raw: value.to_string()
         }
     }
 
-    pub fn builder(cmd: &str) -> MessageBuilder {
+    /// Creates a message builder with the given command.
+    pub fn builder() -> MessageBuilder {
         MessageBuilder {
             tags: Vec::new(),
             prefix: None,
-            command: cmd,
+            command: None,
             params: Vec::new(),
             trailing: None,
         }
     }
 
+    ///
     pub fn tags(&self) -> Option<Tags> {
         if self.raw.starts_with('@') {
             self.raw.find(' ').and_then(|index| Some(Tags::new(&self.raw[1..index])))
@@ -90,36 +94,41 @@ impl ToString for Message {
     }
 }
 
-pub struct MessageBuilder<'a> {
+pub struct MessageBuilder {
     tags: Vec<String>,
     prefix: Option<Prefix>,
-    command: &'a str,
+    command: Option<String>,
     params: Vec<String>,
     trailing: Option<String>,
 }
 
-impl<'a> MessageBuilder<'a> {
-    pub fn tag(mut self, key: &'a str, value: &'a str) -> MessageBuilder<'a> {
+impl MessageBuilder {
+    pub fn command(mut self, cmd: &str) -> MessageBuilder {
+        self.command = Some(cmd.to_string());
+        self
+    }
+
+    pub fn tag(mut self, key: &str, value: &str) -> MessageBuilder {
         self.tags.push(format!("{}={}", key, value));
         self
     }
 
-    pub fn prefix(mut self, prefix_builder: PrefixBuilder) -> MessageBuilder<'a> {
+    pub fn prefix(mut self, prefix_builder: PrefixBuilder) -> MessageBuilder {
         self.prefix = Some(prefix_builder.build().unwrap());
         self
     }
 
-    pub fn param(mut self, param: &'a str) -> MessageBuilder<'a> {
+    pub fn param(mut self, param: &str) -> MessageBuilder {
         self.params.push(param.to_string());
         self
     }
 
-    pub fn trailing(mut self, trailing: &'a str) -> MessageBuilder<'a> {
+    pub fn trailing(mut self, trailing: &str) -> MessageBuilder {
         self.trailing = Some(trailing.to_string());
         self
     }
 
-    pub fn build(self) -> Message {
+    pub fn build(self) -> Result<Message, &'static str> {
         let mut str = if !self.tags.is_empty() {
             format!("@{} ", self.tags.join(";"))
         } else {
@@ -128,15 +137,19 @@ impl<'a> MessageBuilder<'a> {
         if let Some(prefix) = self.prefix {
             str = format!("{}:{} ", str, prefix.to_string())
         }
-        str = format!("{}{}", str, self.command);
+        if let Some(command) = self.command {
+            str = format!("{}{}", str, command);
+        } else {
+            return Err("message requires a command")
+        }
         if !self.params.is_empty() {
             str = format!("{} {}", str, self.params.join(" "));
         }
         if let Some(trailing) = self.trailing {
             str = format!("{} :{}", str, trailing);
         }
-        Message {
+        Ok(Message {
             raw: str
-        }
+        })
     }
 }
