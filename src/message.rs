@@ -99,7 +99,7 @@ impl ToString for Message {
     }
 }
 
-/// A MessageBuilder for a simpler generation of a message instead of building an string first.
+//// A MessageBuilder for a simpler generation of a message instead of building an string first.
 pub struct MessageBuilder<'a> {
     tags: HashMap<&'a str, &'a str>,
     prefix: Option<Prefix>,
@@ -115,28 +115,31 @@ impl<'a> MessageBuilder<'a> {
         self
     }
 
-    /// Add a tag and ignore if the tag has already been present. Duplicate keys are possible.
+    /// Set a tag.
     pub fn tag(mut self, key: &'a str, value: &'a str) -> MessageBuilder<'a> {
         self.tags.insert(key, value);
         self
     }
 
-    ///
+    /// Set a prefix.
     pub fn prefix(mut self, prefix_builder: PrefixBuilder) -> MessageBuilder<'a> {
         self.prefix = Some(prefix_builder.build().unwrap());
         self
     }
 
+    /// Add a param.
     pub fn param(mut self, param: &'a str) -> MessageBuilder<'a> {
         self.params.push(param);
         self
     }
 
+    //( Add a trailing param;
     pub fn trailing(mut self, trailing: &'a str) -> MessageBuilder<'a> {
         self.trailing = Some(trailing);
         self
     }
 
+    /// Create a Message instance and return if valid.
     pub fn build(self) -> Result<Message, &'static str> {
         let mut str = String::new();
         if !self.tags.is_empty() {

@@ -1,20 +1,24 @@
 use std::ops::Index;
 
+/// Tag Map as described through IRCv3.
 pub struct Tags<'a> {
     raw: &'a str,
 }
 
 impl<'a> Tags<'a> {
+    /// Create a new Tag map from the given string. Expects it to be in valid IRCv3 format.
     pub fn new(raw: &'a str) -> Tags<'a> {
         Tags {
             raw,
         }
     }
 
+    /// Character length of the tags if formatted as IRC string.
     pub fn len(&self) -> usize {
         self.raw.len()
     }
 
+    /// Iterator over the tag entries.
     pub fn iter(&self) -> impl Iterator<Item=(&'a str, &'a str)> {
         self.raw.split(';')
             .map(|kv| {
