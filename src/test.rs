@@ -188,5 +188,6 @@ fn test_message_builder() {
         .param("param1").param("param2")
         .trailing("trailing")
         .build().unwrap();
-    assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing")
+    let str = message.to_string();
+    assert!(str.as_str() == "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing" || str.as_str() == "@key2=value2;key1=value1 :name!user@host CMD param1 param2 :trailing");
 }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::params::Params;
 use crate::prefix::{Prefix, PrefixBuilder};
 use crate::tags::Tags;
@@ -15,10 +17,10 @@ impl Message {
         }
     }
 
-    /// Creates a message builder with the given command.
-    pub fn builder() -> MessageBuilder {
+    /// Creates a message builder as alternative to building an irc string before creating the message.
+    pub fn builder() -> MessageBuilder<'static> {
         MessageBuilder {
-            tags: Vec::new(),
+            tags: HashMap::new(),
             prefix: None,
             command: None,
             params: Vec::new(),
@@ -26,7 +28,7 @@ impl Message {
         }
     }
 
-    ///
+    /// Returns tags if any are present.
     pub fn tags(&self) -> Option<Tags> {
         if self.raw.starts_with('@') {
             self.raw.find(' ').and_then(|index| Some(Tags::new(&self.raw[1..index])))
@@ -35,6 +37,7 @@ impl Message {
         }
     }
 
+    /// Returns the Prefix if present.
     pub fn prefix(&self) -> Option<Prefix> {
         let offset = self.tags()
             // Set offset if tags exist
@@ -53,6 +56,7 @@ impl Message {
         }
     }
 
+    /// Returns the command the message represents.
     pub fn command(&self) -> &str {
         let without_tags = match self.raw.find(' ') {
             Some(start) => {
@@ -80,6 +84,7 @@ impl Message {
         }
     }
 
+    /// Returns the params if any are present.
     pub fn params(&self) -> Option<Params> {
         let command = self.command();
         let cmd_start = self.raw.find(command).unwrap();
@@ -94,53 +99,64 @@ impl ToString for Message {
     }
 }
 
-pub struct MessageBuilder {
-    tags: Vec<String>,
+/// A MessageBuilder for a simpler generation of a message instead of building an string first.
+pub struct MessageBuilder<'a> {
+    tags: HashMap<&'a str, &'a str>,
     prefix: Option<Prefix>,
-    command: Option<String>,
-    params: Vec<String>,
-    trailing: Option<String>,
+    command: Option<&'a str>,
+    params: Vec<&'a str>,
+    trailing: Option<&'a str>,
 }
 
-impl MessageBuilder {
-    pub fn command(mut self, cmd: &str) -> MessageBuilder {
-        self.command = Some(cmd.to_string());
+impl<'a> MessageBuilder<'a> {
+    /// Set the command.
+    pub fn command(mut self, cmd: &'a str) -> MessageBuilder<'a> {
+        self.command = Some(cmd);
         self
     }
 
-    pub fn tag(mut self, key: &str, value: &str) -> MessageBuilder {
-        self.tags.push(format!("{}={}", key, value));
+    /// Add a tag and ignore if the tag has already been present. Duplicate keys are possible.
+    pub fn tag(mut self, key: &'a str, value: &'a str) -> MessageBuilder<'a> {
+        self.tags.insert(key, value);
         self
     }
 
-    pub fn prefix(mut self, prefix_builder: PrefixBuilder) -> MessageBuilder {
+    ///
+    pub fn prefix(mut self, prefix_builder: PrefixBuilder) -> MessageBuilder<'a> {
         self.prefix = Some(prefix_builder.build().unwrap());
         self
     }
 
-    pub fn param(mut self, param: &str) -> MessageBuilder {
-        self.params.push(param.to_string());
+    pub fn param(mut self, param: &'a str) -> MessageBuilder<'a> {
+        self.params.push(param);
         self
     }
 
-    pub fn trailing(mut self, trailing: &str) -> MessageBuilder {
-        self.trailing = Some(trailing.to_string());
+    pub fn trailing(mut self, trailing: &'a str) -> MessageBuilder<'a> {
+        self.trailing = Some(trailing);
         self
     }
 
     pub fn build(self) -> Result<Message, &'static str> {
-        let mut str = if !self.tags.is_empty() {
-            format!("@{} ", self.tags.join(";"))
-        } else {
-            String::new()
-        };
+        let mut str = String::new();
+        if !self.tags.is_empty() {
+            str.push('@');
+            for (key, val) in self.tags {
+                str.push_str(key);
+                str.push_str("=");
+                str.push_str(val);
+                str.push_str(";")
+            }
+            str.pop();
+            str.push(' ');
+        }
         if let Some(prefix) = self.prefix {
             str = format!("{}:{} ", str, prefix.to_string())
         }
         if let Some(command) = self.command {
             str = format!("{}{}", str, command);
         } else {
-            return Err("message requires a command")
+            return Err("message requires a command");
         }
         if !self.params.is_empty() {
             str = format!("{} {}", str, self.params.join(" "));
