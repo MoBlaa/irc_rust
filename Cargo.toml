@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["mo_blaa <moblaa@gmx.net>"]
 edition = "2018"
 description = "IRC Helper easing the access and creation of IRC Messages"
+documentation = "https://docs.rs/irc_rust"
+homepage = "https://github.com/MoBlaa/irc_rust"
+repository = "https://github.com/MoBlaa/irc_rust"
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
