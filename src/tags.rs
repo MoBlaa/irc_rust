@@ -1,5 +1,5 @@
 pub struct Tags<'a> {
-    pub raw: &'a str,
+    raw: &'a str,
     cursor: usize,
     done: bool,
 }
@@ -11,6 +11,10 @@ impl<'a> Tags<'a> {
             cursor: 0,
             done: false,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.raw.len()
     }
 }
 

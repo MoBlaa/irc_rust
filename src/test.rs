@@ -51,7 +51,7 @@ fn test_tags() {
 
 #[test]
 fn test_parse() {
-    let message = Message::from(":name!user@host CMD param1 param2 :trailing");
+    let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 
     let prefix = message.prefix().unwrap();
     assert_eq!(prefix.name(), "name");
@@ -60,12 +60,13 @@ fn test_parse() {
 
     assert_eq!(message.command(), "CMD");
 
-    let mut params = message.params().unwrap();
-    assert_eq!(params.next().unwrap(), "param1");
-    assert_eq!(params.next().unwrap(), "param2");
-    assert_eq!(params.next().unwrap(), "trailing");
+    let params = message.params().unwrap();
+    let mut iter = params.iter();
+    assert_eq!(iter.next().unwrap(), "param1");
+    assert_eq!(iter.next().unwrap(), "param2");
+    assert!(iter.next().is_none());
 
-    assert_eq!(params.trailing().unwrap(), "trailing")
+    assert_eq!(params.trailing.unwrap(), "trailing")
 }
 
 #[test]
@@ -77,12 +78,13 @@ fn test_without_prefix() {
 
     assert_eq!(message.command(), "CMD");
 
-    let mut params = message.params().unwrap();
-    assert_eq!(params.next().unwrap(), "param1");
-    assert_eq!(params.next().unwrap(), "param2");
-    assert_eq!(params.next().unwrap(), "trailing");
+    let params = message.params().unwrap();
+    let mut iter = params.iter();
+    assert_eq!(iter.next().unwrap(), "param1");
+    assert_eq!(iter.next().unwrap(), "param2");
+    assert!(iter.next().is_none());
 
-    assert_eq!(params.trailing().unwrap(), "trailing")
+    assert_eq!(params.trailing.unwrap(), "trailing")
 }
 
 #[test]
@@ -104,10 +106,11 @@ fn test_cmd_and_trailing() {
 
     assert_eq!(message.command(), "CMD");
 
-    let mut params = message.params().unwrap();
-    assert_eq!(params.next().unwrap(), "trailing");
+    let params = message.params().unwrap();
+    let mut iter = params.iter();
+    assert!(iter.next().is_none());
 
-    assert_eq!(params.trailing().unwrap(), "trailing")
+    assert_eq!(params.trailing.unwrap(), "trailing")
 }
 
 #[test]
@@ -118,11 +121,12 @@ fn test_cmd_and_param() {
 
     assert_eq!(message.command(), "CMD");
 
-    let mut params = message.params().unwrap();
-    assert_eq!(params.next().unwrap(), "param1");
-    assert!(params.next().is_none());
+    let params = message.params().unwrap();
+    let mut iter = params.iter();
+    assert_eq!(iter.next().unwrap(), "param1");
+    assert!(iter.next().is_none());
 
-    assert!(params.trailing().is_none());
+    assert!(params.trailing.is_none());
 }
 
 #[test]

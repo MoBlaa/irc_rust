@@ -42,7 +42,7 @@ impl Message {
             // Set offset if tags exist
             .and_then(|tags| {
                 // + '@' + ' '
-                Some(tags.raw.len() + 2)
+                Some(tags.len() + 2)
             }).unwrap_or(0);
         match self.raw.chars().nth(offset) {
             Some(':') => {
@@ -56,12 +56,22 @@ impl Message {
     }
 
     pub fn command(&self) -> &str {
-        let without_prefix = match self.raw.find(' ') {
+        let without_tags = match self.raw.find(' ') {
             Some(start) => {
-                if self.raw.starts_with(":") {
+                if self.raw.starts_with("@") {
                     &self.raw[start + 1..]
                 } else {
                     &self.raw
+                }
+            }
+            None => self.raw.as_str()
+        };
+        let without_prefix = match without_tags.find(' ') {
+            Some(start) => {
+                if without_tags.starts_with(":") {
+                    &without_tags[start + 1..]
+                } else {
+                    without_tags
                 }
             }
             None => self.raw.as_str()
