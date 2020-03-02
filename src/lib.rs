@@ -10,7 +10,7 @@
 //!
 //! # Support
 //!
-//! Current support (as of version '0.1.0'):
+//! Current support (as of version '0.1.1'):
 //!
 //! - **Message**: Create read-only Message from `&str` and with a builder `Message::builder()`.
 //! - **Tags**: access through the indexing operator and iterating over all tags.
