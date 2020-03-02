@@ -1,5 +1,5 @@
 use crate::params::Params;
-use crate::prefix::{Prefix};
+use crate::prefix::{Prefix, PrefixBuilder};
 use crate::tags::Tags;
 
 pub struct Message {
@@ -10,6 +10,16 @@ impl Message {
     pub fn new(value: &str) -> Message {
         Message {
             raw: value.to_string()
+        }
+    }
+
+    pub fn builder(cmd: &str) -> MessageBuilder {
+        MessageBuilder {
+            tags: Vec::new(),
+            prefix: None,
+            command: cmd,
+            params: Vec::new(),
+            trailing: None,
         }
     }
 
@@ -77,5 +87,56 @@ impl Message {
 impl ToString for Message {
     fn to_string(&self) -> String {
         self.raw.to_string()
+    }
+}
+
+pub struct MessageBuilder<'a> {
+    tags: Vec<String>,
+    prefix: Option<Prefix>,
+    command: &'a str,
+    params: Vec<String>,
+    trailing: Option<String>,
+}
+
+impl<'a> MessageBuilder<'a> {
+    pub fn tag(mut self, key: &'a str, value: &'a str) -> MessageBuilder<'a> {
+        self.tags.push(format!("{}={}", key, value));
+        self
+    }
+
+    pub fn prefix(mut self, prefix_builder: PrefixBuilder) -> MessageBuilder<'a> {
+        self.prefix = Some(prefix_builder.build().unwrap());
+        self
+    }
+
+    pub fn param(mut self, param: &'a str) -> MessageBuilder<'a> {
+        self.params.push(param.to_string());
+        self
+    }
+
+    pub fn trailing(mut self, trailing: &'a str) -> MessageBuilder<'a> {
+        self.trailing = Some(trailing.to_string());
+        self
+    }
+
+    pub fn build(self) -> Message {
+        let mut str = if !self.tags.is_empty() {
+            format!("@{} ", self.tags.join("="))
+        } else {
+            String::new()
+        };
+        if let Some(prefix) = self.prefix {
+            str = format!("{}:{} ", str, prefix.to_string())
+        }
+        str = format!("{}{}", str, self.command);
+        if !self.params.is_empty() {
+            str = format!("{} {}", str, self.params.join(" "));
+        }
+        if let Some(trailing) = self.trailing {
+            str = format!("{} :{}", str, trailing);
+        }
+        Message {
+            raw: str
+        }
     }
 }

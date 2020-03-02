@@ -1,4 +1,5 @@
 use crate::message::Message;
+use crate::prefix::Prefix;
 
 #[test]
 fn test_parse() {
@@ -172,4 +173,17 @@ fn test_prefix() {
     assert_eq!(message.command(), "CMD");
 
     assert!(message.params().is_none());
+}
+
+#[test]
+fn test_message_builder() {
+    let message = Message::builder("CMD")
+        .tag("key1", "key2")
+        .prefix(Prefix::builder("name")
+            .user("user")
+            .host("host")
+        ).param("param1").param("param2")
+        .trailing("trailing")
+        .build();
+    assert_eq!(message.to_string(), "@key1=key2 :name!user@host CMD param1 param2 :trailing")
 }

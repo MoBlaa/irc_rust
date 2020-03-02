@@ -1,7 +1,7 @@
 .PHONY: coverage build install_coverage_tool
 
 build:
-	@cargo build
+	@cargo build --release
 
 install_coverage_tool:
 	@cargo install cargo-tarpaulin
