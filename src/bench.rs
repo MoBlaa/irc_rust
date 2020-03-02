@@ -10,7 +10,7 @@ use crate::message::Message;
 #[bench]
 fn bench_parse(b: &mut Bencher) {
     b.iter(|| {
-        let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+        let message = Message::new("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 
         assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
         // 42 ns/iter
@@ -47,7 +47,7 @@ fn bench_parse(b: &mut Bencher) {
         assert!(iter.next().is_none());
         assert_eq!(params.trailing.unwrap(), "trailing")
         // 793 ns/iter
-    })
+    });
 }
 
 #[bench]

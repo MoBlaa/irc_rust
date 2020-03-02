@@ -2,20 +2,14 @@ use crate::params::Params;
 use crate::prefix::{Prefix};
 use crate::tags::Tags;
 
-pub struct Message<'a> {
-    raw: &'a str
+pub struct Message {
+    raw: String
 }
 
-impl<'a> Message<'a> {
-    pub fn new(value: &'a str) -> Message<'a> {
+impl Message {
+    pub fn new(value: &str) -> Message {
         Message {
-            raw: value
-        }
-    }
-
-    pub fn from(str: &'a str) -> Message<'a> {
-        Message {
-            raw: str
+            raw: value.to_string()
         }
     }
 
@@ -27,7 +21,7 @@ impl<'a> Message<'a> {
         }
     }
 
-    pub fn prefix(&self) -> Option<Prefix<'a>> {
+    pub fn prefix(&self) -> Option<Prefix> {
         let offset = self.tags()
             // Set offset if tags exist
             .and_then(|tags| {
@@ -45,16 +39,16 @@ impl<'a> Message<'a> {
         }
     }
 
-    pub fn command(&self) -> &'a str {
+    pub fn command(&self) -> &str {
         let without_tags = match self.raw.find(' ') {
             Some(start) => {
                 if self.raw.starts_with("@") {
                     &self.raw[start + 1..]
                 } else {
-                    self.raw
+                    &self.raw
                 }
             }
-            None => self.raw
+            None => &self.raw
         };
         let without_prefix = match without_tags.find(' ') {
             Some(start) => {
@@ -64,7 +58,7 @@ impl<'a> Message<'a> {
                     without_tags
                 }
             }
-            None => self.raw
+            None => &self.raw
         };
         match without_prefix.find(' ') {
             Some(end) => &without_prefix[..end],
@@ -80,7 +74,7 @@ impl<'a> Message<'a> {
     }
 }
 
-impl<'a> ToString for Message<'a> {
+impl ToString for Message {
     fn to_string(&self) -> String {
         self.raw.to_string()
     }
