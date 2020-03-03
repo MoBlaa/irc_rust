@@ -16,9 +16,9 @@
 //!
 //! # Support
 //!
-//! Current support (as of version '0.1.1'):
+//! Current support (as of version '0.1.*'):
 //!
-//! - **Message**: Create read-only Message from `&str` and with a builder `Message::builder()`.
+//! - **Message**: Create read-only Message from `String` or `&str` and with a builder `Message::builder()`.
 //! - **Tags**: access through the indexing operator and iterating over all tags.
 //! - **Prefix**: Read-only access + Builder.
 //! - **Parameters List**: Read-only access, Iteration over elements, separate access to trailing parameter.
