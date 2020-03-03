@@ -1,8 +1,14 @@
 #![feature(test)]
 
-//! This crate implements a simple irc message wrapper. Its goal is to ease the access
-//! to fields of the message without requiring the user to handle offsets and other IRC
-//! related things. Therefore this project expects the strings passed to tÖLhe struct
+//! This crate implements a simple irc message wrapper.
+//!
+//! This project has 2 goals:
+//!
+//! - Ease the access to fields of the message without requiring the user to handle offsets and other IRC related things.
+//! - Minimize memory foodprint. For this goal the `Message` struct only owns the `String` of the actual message. Any
+//!     parts of the message and other structs only work on references of this string.
+//!
+//! Therefore this project expects the strings passed to the struct
 //! constructors to be valid parts of the IRC standard.
 //!
 //! As reference the [RFC2812](https://tools.ietf.org/html/rfc2812) and some extensions
@@ -19,12 +25,35 @@
 //!
 //! # Examples - for starters
 //!
+//! Simple example with static string:
+//!
 //! ```
 //! use irc_rust::message::Message;
 //!
-//! let message = Message::new("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+//! let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 //!
 //! assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+//! ```
+//!
+//! While reading from standard input the `Message::new` method has to be used.
+//!
+//! ```
+//! use irc_rust::message::Message;
+//! use std::io::{BufRead, stdin};
+//!
+//! for line in stdin().lock().lines() {
+//!     match line {
+//!         Ok(line) => {
+//!             let message = Message::new(line);
+//!             println!("> Received command: {}", message.command());
+//!         }
+//!         Err(e) => {
+//!             println!("got error; aborting: {}", e);
+//!             break;
+//!         }
+//!     }
+//! }
+//!
 //! ```
 
 pub mod message;

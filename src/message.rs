@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::params::Params;
-use crate::prefix::{Prefix, PrefixBuilder};
+use crate::prefix::Prefix;
 use crate::tags::Tags;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
@@ -10,34 +10,27 @@ use crate::tags::Tags;
 /// ```
 /// use irc_rust::message::Message;
 ///
-/// let message = Message::new("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+/// let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 ///
 /// assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 /// ```
 ///
 /// ```
 /// use irc_rust::message::Message;
-/// use irc_rust::prefix::Prefix;
 ///
 /// let message = Message::builder()
 ///         .tag("key1", "value1")
 ///         .tag("key2", "value2")
-///         .prefix(Prefix::builder("name")
-///             .user("user")
-///             .host("host")
-///         )
+///         .prefix_name("name")
+///         .prefix_user("user")
+///         .prefix_host("host")
 ///         .command("CMD")
 ///         .param("param1").param("param2")
 ///         .trailing("trailing")
 ///         .build();
 ///
-/// match message {
-///     Ok(mssg) => {
-///         let tags = mssg.tags().unwrap();
-///         println!("key1={}", tags["key1"]) // Prints 'key1=value1'
-///     }
-///     Err(e) => println!("message building failed: {}", e)
-/// }
+/// let tags = message.tags().unwrap();
+/// println!("key1={}", &tags["key1"]) // Prints 'key1=value1'
 ///
 /// ```
 pub struct Message {
@@ -46,17 +39,26 @@ pub struct Message {
 
 impl Message {
     /// Create a new Message from the given string. Expects the string to be in a valid irc format.
-    pub fn new(value: &str) -> Message {
+    pub fn new(raw: String) -> Message {
         Message {
-            raw: value.to_string()
+            raw
+        }
+    }
+
+    // Create a new Message from the given String view. Expects the string to be in a valid irc format.
+    pub fn from(raw: &str) -> Message {
+        Message {
+            raw: raw.to_string()
         }
     }
 
     /// Creates a message builder as alternative to building an irc string before creating the message.
-    pub fn builder() -> MessageBuilder<'static> {
+    pub fn builder<'a>() -> MessageBuilder<'a> {
         MessageBuilder {
             tags: HashMap::new(),
-            prefix: None,
+            prefix_name: None,
+            prefix_user: None,
+            prefix_host: None,
             command: None,
             params: Vec::new(),
             trailing: None,
@@ -137,7 +139,9 @@ impl ToString for Message {
 //// A MessageBuilder for a simpler generation of a message instead of building an string first.
 pub struct MessageBuilder<'a> {
     tags: HashMap<&'a str, &'a str>,
-    prefix: Option<Prefix>,
+    prefix_name: Option<&'a str>,
+    prefix_user: Option<&'a str>,
+    prefix_host: Option<&'a str>,
     command: Option<&'a str>,
     params: Vec<&'a str>,
     trailing: Option<&'a str>,
@@ -157,8 +161,20 @@ impl<'a> MessageBuilder<'a> {
     }
 
     /// Set a prefix.
-    pub fn prefix(mut self, prefix_builder: PrefixBuilder) -> MessageBuilder<'a> {
-        self.prefix = Some(prefix_builder.build().unwrap());
+    pub fn prefix_name(mut self, name: &'a str) -> MessageBuilder<'a> {
+        self.prefix_name = Some(name);
+        self
+    }
+
+    /// Set a prefix.
+    pub fn prefix_user(mut self, user: &'a str) -> MessageBuilder<'a> {
+        self.prefix_user = Some(user);
+        self
+    }
+
+    /// Set a prefix.
+    pub fn prefix_host(mut self, host: &'a str) -> MessageBuilder<'a> {
+        self.prefix_host = Some(host);
         self
     }
 
@@ -175,7 +191,7 @@ impl<'a> MessageBuilder<'a> {
     }
 
     /// Create a Message instance and return if valid.
-    pub fn build(self) -> Result<Message, &'static str> {
+    pub fn build<'b>(self) -> Message {
         let mut str = String::new();
         if !self.tags.is_empty() {
             str.push('@');
@@ -188,22 +204,37 @@ impl<'a> MessageBuilder<'a> {
             str.pop();
             str.push(' ');
         }
-        if let Some(prefix) = self.prefix {
-            str = format!("{}:{} ", str, prefix.to_string())
+        if let Some(prefix_name) = self.prefix_name {
+            str.push(':');
+            str.push_str(prefix_name);
+            if self.prefix_user.is_some() && self.prefix_host.is_none() {
+                panic!("irc prefix can only contain a user if host is also present");
+            }
+            if let Some(user) = self.prefix_user {
+                str.push('!');
+                str.push_str(user);
+            }
+            if let Some(host) = self.prefix_host {
+                str.push('@');
+                str.push_str(host);
+            }
+            str.push(' ')
         }
         if let Some(command) = self.command {
-            str = format!("{}{}", str, command);
+            str.push_str(command);
         } else {
-            return Err("message requires a command");
+            panic!("irc message requires an command");
         }
         if !self.params.is_empty() {
-            str = format!("{} {}", str, self.params.join(" "));
+            str.push(' ');
+            str.push_str(&self.params.join(" "));
         }
         if let Some(trailing) = self.trailing {
-            str = format!("{} :{}", str, trailing);
+            str.push_str(" :");
+            str.push_str(trailing);
         }
-        Ok(Message {
+        Message {
             raw: str
-        })
+        }
     }
 }

@@ -9,10 +9,13 @@ use crate::message::Message;
 
 #[bench]
 fn bench_parse(b: &mut Bencher) {
-    b.iter(|| {
-        let message = Message::new("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+    // Excluding the allocation of the string
+    let str = String::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+    let raw = str.as_str();
+    b.iter(move || {
+        let message = Message::from(raw);
 
-        assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+        assert_eq!(message.to_string(), raw);
         // 42 ns/iter
 
         let tags = message.tags().unwrap();
@@ -60,7 +63,7 @@ fn bench_tag_index(b: &mut Bencher) {
         }
     }
     str.push_str(" CMD");
-    let message = Message::new(str.as_str());
+    let message = Message::new(str);
     let tags = message.tags().unwrap();
 
     b.iter(|| {
@@ -78,7 +81,7 @@ fn bench_params(b: &mut Bencher) {
     for _ in 0..100 {
         str.push_str(" param");
     }
-    let message = Message::new(str.as_str());
+    let message = Message::new(str);
 
     b.iter(|| {
         for param in message.params().unwrap().iter() {
