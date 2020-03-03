@@ -15,9 +15,6 @@ fn bench_parse(b: &mut Bencher) {
     b.iter(move || {
         let message = Message::from(raw);
 
-        assert_eq!(message.to_string(), raw);
-        // 42 ns/iter
-
         let tags = message.tags().unwrap();
         let val = &tags["key1"];
         assert_eq!(val, "value1");

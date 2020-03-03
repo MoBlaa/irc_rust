@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use crate::params::Params;
 use crate::prefix::Prefix;
 use crate::tags::Tags;
+use std::fmt::{Display, Formatter};
+use std::fmt;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 ///
@@ -130,9 +132,9 @@ impl Message {
     }
 }
 
-impl ToString for Message {
-    fn to_string(&self) -> String {
-        self.raw.to_string()
+impl Display for Message {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.raw)
     }
 }
 
