@@ -10,6 +10,9 @@ use crate::tags::Tags;
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 ///
 /// # Examples
+///
+/// Create a Message from a plain string.
+///
 /// ```
 /// use irc_rust::message::Message;
 ///
@@ -17,6 +20,8 @@ use crate::tags::Tags;
 ///
 /// assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 /// ```
+///
+/// To build a message in a verbose and easy to read way you can use the `Message::builder` method and the `MessageBuilder`.
 ///
 /// ```
 /// use irc_rust::message::Message;
@@ -35,6 +40,20 @@ use crate::tags::Tags;
 /// let tags = message.tags().unwrap();
 /// println!("key1={}", &tags["key1"]) // Prints 'key1=value1'
 ///
+/// ```
+///
+/// You can create a new message from an existing message by calling the `to_builder` method.
+/// To alter existing parameters the `set_param` method can be used.
+///
+/// ```
+/// use irc_rust::message::Message;
+///
+/// let message = Message::from("@key=value :name!user@host CMD param1 :trailing!").to_builder()
+///     .tag("key", "value2")
+///     .param("param2")
+///     .set_param(1, "param3")
+///     .build();
+/// assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param2 :trailing");
 /// ```
 pub struct Message {
     raw: String
