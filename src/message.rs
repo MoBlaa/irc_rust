@@ -180,7 +180,7 @@ impl Display for Message {
     }
 }
 
-//// A MessageBuilder for a simpler generation of a message instead of building an string first.
+/// A MessageBuilder for a simpler generation of a message instead of building an string first.
 pub struct MessageBuilder<'a> {
     tags: HashMap<&'a str, &'a str>,
     prefix_name: Option<&'a str>,
