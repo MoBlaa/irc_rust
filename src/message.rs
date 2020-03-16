@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter};
+use std::fmt;
+use std::iter::FromIterator;
 
 use crate::params::Params;
 use crate::prefix::Prefix;
 use crate::tags::Tags;
-use std::fmt::{Display, Formatter};
-use std::fmt;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 ///
@@ -64,6 +65,28 @@ impl Message {
             command: None,
             params: Vec::new(),
             trailing: None,
+        }
+    }
+
+    /// Creates a builder from this message. Only initializes fields already present in the message.
+    /// By using this method a whole new Message will be created.
+    pub fn to_builder(&self) -> MessageBuilder<'_> {
+        MessageBuilder {
+            tags: if let Some(tags) = self.tags() {
+                HashMap::from_iter(tags.iter())
+            } else {
+                HashMap::new()
+            },
+            prefix_name: self.prefix().map(|prefix| prefix.name()),
+            prefix_user: self.prefix().and_then(|prefix| prefix.user()),
+            prefix_host: self.prefix().and_then(|prefix| prefix.host()),
+            command: Some(self.command()),
+            params: if let Some(params) = self.params() {
+                Vec::from_iter(params.iter())
+            } else {
+                Vec::new()
+            },
+            trailing: self.params().and_then(|params| params.trailing),
         }
     }
 
@@ -183,6 +206,17 @@ impl<'a> MessageBuilder<'a> {
     /// Add a param.
     pub fn param(mut self, param: &'a str) -> MessageBuilder<'a> {
         self.params.push(param);
+        self
+    }
+
+    /// Set a param at the given index. If the index is below 0, it won't be set.
+    /// If index >= length of the existing parameters it will be added to the end but not set as trailing.
+    /// This doesn't allow to set the trailing parameter.
+    pub fn set_param(mut self, index: usize, param: &'a str) -> MessageBuilder<'a> {
+        if index >= self.params.len() {
+            self.params.push(param);
+        }
+        self.params[index] = param;
         self
     }
 

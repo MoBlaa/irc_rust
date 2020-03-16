@@ -188,4 +188,14 @@ fn test_message_builder() {
         .build();
     let str = message.to_string();
     assert!(str.as_str() == "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing" || str.as_str() == "@key2=value2;key1=value1 :name!user@host CMD param1 param2 :trailing");
+
+    let message = message.to_builder()
+        .tag("key1", "value3")
+        .prefix_name("name1")
+        .param("param2")
+        .set_param(1, "param3")
+        .trailing("other trailing!")
+        .build();
+    let str = message.to_string();
+    assert!(str.as_str() == "@key1=value3;key2=value2 :name1!user@host CMD param1 param3 param2 :other trailing!" || str.as_str() == "@key2=value2;key1=value3 :name1!user@host CMD param1 param3 param2 :other trailing!");
 }
