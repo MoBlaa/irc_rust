@@ -51,9 +51,10 @@ use crate::tags::Tags;
 /// let message = Message::from("@key=value :name!user@host CMD param1 :trailing!").to_builder()
 ///     .tag("key", "value2")
 ///     .param("param2")
+///     .param("param4")
 ///     .set_param(1, "param3")
 ///     .build();
-/// assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param2 :trailing");
+/// assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
 /// ```
 pub struct Message {
     raw: String
@@ -112,7 +113,7 @@ impl Message {
     /// Returns tags if any are present.
     pub fn tags(&self) -> Option<Tags> {
         if self.raw.starts_with('@') {
-            self.raw.find(' ').and_then(|index| Some(Tags::new(&self.raw[1..index])))
+            self.raw.find(' ').map(|index| Tags::new(&self.raw[1..index]))
         } else {
             None
         }
@@ -122,9 +123,9 @@ impl Message {
     pub fn prefix(&self) -> Option<Prefix> {
         let offset = self.tags()
             // Set offset if tags exist
-            .and_then(|tags| {
+            .map(|tags| {
                 // + '@' + ' '
-                Some(tags.len() + 2)
+                tags.len() + 2
             }).unwrap_or(0);
         match self.raw.chars().nth(offset) {
             Some(':') => {
@@ -141,7 +142,7 @@ impl Message {
     pub fn command(&self) -> &str {
         let without_tags = match self.raw.find(' ') {
             Some(start) => {
-                if self.raw.starts_with("@") {
+                if self.raw.starts_with('@') {
                     &self.raw[start + 1..]
                 } else {
                     &self.raw
@@ -151,7 +152,7 @@ impl Message {
         };
         let without_prefix = match without_tags.find(' ') {
             Some(start) => {
-                if without_tags.starts_with(":") {
+                if without_tags.starts_with(':') {
                     &without_tags[start + 1..]
                 } else {
                     without_tags
@@ -170,7 +171,7 @@ impl Message {
         let command = self.command();
         let cmd_start = self.raw.find(command).unwrap();
         self.raw[cmd_start..].find(' ')
-            .and_then(|param_start| Some(Params::new(&self.raw[cmd_start + param_start..])))
+            .map(|param_start| Params::new(&self.raw[cmd_start + param_start..]))
     }
 }
 
@@ -246,7 +247,7 @@ impl<'a> MessageBuilder<'a> {
     }
 
     /// Create a Message instance and return if valid.
-    pub fn build<'b>(self) -> Message {
+    pub fn build(self) -> Message {
         let mut str = String::new();
         if !self.tags.is_empty() {
             str.push('@');

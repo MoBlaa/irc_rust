@@ -22,16 +22,15 @@ impl<'a> Prefix<'a> {
     // Returns the (server- or nick-) name.
     pub fn name(&self) -> &'a str {
         let end = self.raw.find('!')
-            .or(self.raw.find('@'))
-            .or(self.raw.find(' '))
-            .unwrap_or(self.raw.len());
+            .or_else(|| self.raw.find('@'))
+            .or_else(|| self.raw.find(' '))
+            .unwrap_or_else(|| self.raw.len());
         &self.raw[..end]
     }
 
     // Returns the host if present.
     pub fn host(&self) -> Option<&'a str> {
-        self.raw.find('@')
-            .and_then(|index| Some(&self.raw[index + 1..]))
+        self.raw.find('@').map(|index| &self.raw[index + 1..])
     }
 
     // Returns the host if present.
@@ -39,7 +38,7 @@ impl<'a> Prefix<'a> {
         self.raw.find('!')
             .and_then(|start| {
                 let end = self.raw.find('@')
-                    .unwrap_or(self.raw.len());
+                    .unwrap_or_else(|| self.raw.len());
                 Some(&self.raw[start + 1..end])
             })
     }

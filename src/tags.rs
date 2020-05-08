@@ -18,6 +18,10 @@ impl<'a> Tags<'a> {
         self.raw.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.raw.is_empty()
+    }
+
     /// Iterator over the tag entries.
     pub fn iter(&self) -> impl Iterator<Item=(&'a str, &'a str)> {
         self.raw.split(';')
@@ -36,8 +40,8 @@ impl<'a> Tags<'a> {
             })
             .and_then(|start| {
                 self.raw[start..].find(';')
-                    .or(self.raw[start..].find(' '))
-                    .or(Some(self.raw.len() - start))
+                    .or_else(|| self.raw[start..].find(' '))
+                    .or_else(|| Some(self.raw.len() - start))
                     .map(|end| (start, start + end))
             })
     }
