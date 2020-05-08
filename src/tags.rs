@@ -29,7 +29,8 @@ impl<'a> Tags<'a> {
 
     // Search for the key and return start and end of the value
     fn find(&self, key: &'a str) -> Option<(usize, usize)> {
-        self.raw.find(key)
+        let key_equals = format!("{}=", key);
+        self.raw.find(&key_equals)
             .map(|start| {
                 start + key.len() + 1
             })
@@ -40,6 +41,11 @@ impl<'a> Tags<'a> {
                     .map(|end| (start, start + end))
             })
     }
+
+    pub fn get(&self, key: &'a str) -> Option<&'a str> {
+        self.find(key)
+            .map(|(start, end)| &self.raw[start..end])
+    }
 }
 
 impl<'a> Index<&'a str> for Tags<'a> {
@@ -47,7 +53,30 @@ impl<'a> Index<&'a str> for Tags<'a> {
 
     fn index(&self, key: &'a str) -> &Self::Output {
         // Find the key
-        let (start, end) = self.find(key).unwrap();
+        let (start, end) = self.find(key)
+            .expect("no element with key found");
         &self.raw[start..end]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::tags::Tags;
+
+    #[test]
+    fn test_get_and_index() {
+        let tags = Tags::new("hello=world;whats=goes");
+        let get = tags.get("hello");
+        let index = &tags["hello"];
+        assert_eq!(get, Some("world"));
+        assert_eq!(index, "world");
+        let get = tags.get("whats");
+        let index = &tags["whats"];
+        assert_eq!(get, Some("goes"));
+        assert_eq!(index, "goes");
+        let get = tags.get("world");
+        // Would panic
+        // let index = &tags["world"];
+        assert_eq!(get, None);
     }
 }
