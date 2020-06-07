@@ -3,6 +3,8 @@ use std::fmt::{Display, Formatter};
 use std::fmt;
 use std::iter::FromIterator;
 
+use serde::{Deserialize, Serialize};
+
 use crate::params::Params;
 use crate::prefix::Prefix;
 use crate::tags::Tags;
@@ -56,6 +58,7 @@ use crate::tags::Tags;
 ///     .build();
 /// assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
 /// ```
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Message {
     raw: String
 }
@@ -292,5 +295,19 @@ impl<'a> MessageBuilder<'a> {
         Message {
             raw: str
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::message::Message;
+
+    #[test]
+    fn test_serde() {
+        let message = Message::new("@test=test :user@prefix!host COMMAND param :trailing".to_string());
+        let serialized = serde_json::to_string(&message).unwrap();
+        println!("Ser: {}", serialized);
+        let deserialized: Message = serde_json::from_str(serialized.as_str()).unwrap();
+        assert_eq!(deserialized.to_string(), message.to_string());
     }
 }
