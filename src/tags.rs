@@ -1,6 +1,7 @@
 use std::ops::Index;
 
 /// Tag Map as described through IRCv3.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Tags<'a> {
     raw: &'a str,
 }

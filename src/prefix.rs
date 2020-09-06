@@ -1,6 +1,7 @@
 /// Message prefix containing a name (servername or nickname) and optional
 /// user and host. If the user and host are set the name is semantically
 /// seen as the nickname.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Prefix<'a> {
     raw: &'a str
 }

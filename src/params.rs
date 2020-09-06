@@ -1,8 +1,8 @@
 use core::fmt;
-use serde::{Deserialize, Serialize};
 
 /// Parameter list with an optional trailing message.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash, Default)]
+#[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Params<'a> {
     raw: &'a str,
     trailing_start: Option<usize>

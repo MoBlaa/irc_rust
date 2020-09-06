@@ -3,8 +3,6 @@ use std::fmt::{Display, Formatter};
 use std::fmt;
 use std::iter::FromIterator;
 
-use serde::{Deserialize, Serialize};
-
 use crate::params::Params;
 use crate::prefix::Prefix;
 use crate::tags::Tags;
@@ -60,7 +58,8 @@ use crate::tags::Tags;
 ///     .build();
 /// assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
 /// ```
-#[derive(Serialize, Deserialize, Debug, Clone, Eq, Ord, PartialOrd, PartialEq, Hash)]
+#[derive(Debug, Clone, Eq, Ord, PartialOrd, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Message {
     raw: String
 }
