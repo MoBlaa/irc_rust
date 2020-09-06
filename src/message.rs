@@ -44,7 +44,7 @@ use std::convert::TryFrom;
 ///         .trailing("trailing")
 ///         .build()?;
 ///
-///     let tags = message.tags().unwrap();
+///     let tags = message.tags().unwrap().unwrap();
 ///     println!("key1={}", &tags["key1"]); // Prints 'key1=value1'
 ///     Ok(())
 /// }
@@ -58,7 +58,7 @@ use std::convert::TryFrom;
 /// use std::error::Error;
 ///
 /// fn main() -> Result<(), Box<dyn Error>> {
-///     let message = Message::from("@key=value :name!user@host CMD param1 :trailing!").to_builder()
+///     let message = Message::from("@key=value :name!user@host CMD param1 :trailing!").to_builder()?
 ///     .tag("key", "value2")
 ///     .param("param2")
 ///     .param("param4")
