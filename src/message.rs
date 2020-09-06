@@ -26,8 +26,10 @@ use crate::builder::Message as MessageBuilder;
 ///
 /// ```rust
 /// use irc_rust::Message;
+/// use std::error::Error;
 ///
-/// let message = Message::builder()
+/// fn main() -> Result<(), Box<dyn Error>> {
+///     let message = Message::builder()
 ///         .tag("key1", "value1")
 ///         .tag("key2", "value2")
 ///         .prefix_name("name")
@@ -36,11 +38,12 @@ use crate::builder::Message as MessageBuilder;
 ///         .command("CMD")
 ///         .param("param1").param("param2")
 ///         .trailing("trailing")
-///         .build()
-///         .expect("failed to build message");
+///         .build()?;
 ///
-/// let tags = message.tags().unwrap();
-/// println!("key1={}", &tags["key1"]); // Prints 'key1=value1'
+///     let tags = message.tags().unwrap();
+///     println!("key1={}", &tags["key1"]); // Prints 'key1=value1'
+///     Ok(())
+/// }
 /// ```
 ///
 /// You can create a new message from an existing message by calling the `to_builder` method.
@@ -48,15 +51,19 @@ use crate::builder::Message as MessageBuilder;
 ///
 /// ```rust
 /// use irc_rust::Message;
+/// use std::error::Error;
 ///
-/// let message = Message::from("@key=value :name!user@host CMD param1 :trailing!").to_builder()
+/// fn main() -> Result<(), Box<dyn Error>> {
+///     let message = Message::from("@key=value :name!user@host CMD param1 :trailing!").to_builder()
 ///     .tag("key", "value2")
 ///     .param("param2")
 ///     .param("param4")
 ///     .set_param(1, "param3")
-///     .build()
-///     .expect("failed to build message");
-/// assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
+///     .build()?;
+///
+///     assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
+///     Ok(())
+/// }
 /// ```
 #[derive(Debug, Clone, Eq, Ord, PartialOrd, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
