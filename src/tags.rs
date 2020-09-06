@@ -80,6 +80,12 @@ impl<'a> fmt::Display for Tags<'a> {
     }
 }
 
+impl<'a> AsRef<str> for Tags<'a> {
+    fn as_ref(&self) -> &str {
+        self.raw
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::tags::Tags;

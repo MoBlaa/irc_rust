@@ -6,7 +6,7 @@ use test::Bencher;
 use rand::Rng;
 
 use crate::message::Message;
-use crate::Params;
+use crate::{Params, Tags};
 
 #[bench]
 fn bench_parse(b: &mut Bencher) {
@@ -49,6 +49,22 @@ fn bench_parse(b: &mut Bencher) {
         assert_eq!(params.trailing().unwrap(), "trailing")
         // 793 ns/iter
     });
+}
+
+#[bench]
+fn bench_tag_create(b: &mut Bencher) {
+    let mut str = String::new();
+    for i in 0..1000 {
+        str = format!("{}key{}=value{}", str, i, i);
+        if i != 1000 {
+            str.push(';');
+        }
+    }
+
+    b.iter(|| {
+        let tags = Tags::from(str.as_str());
+        assert_eq!(tags.as_ref(), str.as_str());
+    })
 }
 
 #[bench]

@@ -55,3 +55,9 @@ impl<'a> fmt::Display for Prefix<'a> {
         self.raw.fmt(f)
     }
 }
+
+impl<'a> AsRef<str> for Prefix<'a> {
+    fn as_ref(&self) -> &str {
+        self.raw
+    }
+}
