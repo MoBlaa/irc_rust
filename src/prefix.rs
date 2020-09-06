@@ -9,15 +9,9 @@ pub struct Prefix<'a> {
     raw: &'a str
 }
 
-impl<'a> fmt::Display for Prefix<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.raw.fmt(f)
-    }
-}
-
 impl<'a> Prefix<'a> {
     /// Create a new Prefix from the given string. Expects the string to be a valid prefix string.
-    pub fn new() -> Prefix<'a> {
+    pub fn new() -> Self {
         Prefix {
             raw: ""
         }
@@ -53,5 +47,11 @@ impl<'a> From<&'a str> for Prefix<'a> {
         Prefix {
             raw
         }
+    }
+}
+
+impl<'a> fmt::Display for Prefix<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.raw.fmt(f)
     }
 }
