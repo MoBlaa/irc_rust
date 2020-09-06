@@ -51,3 +51,9 @@ impl<'a> From<&'a str> for Params<'a> {
         }
     }
 }
+
+impl<'a> AsRef<str> for Params<'a> {
+    fn as_ref(&self) -> &str {
+        self.raw
+    }
+}
