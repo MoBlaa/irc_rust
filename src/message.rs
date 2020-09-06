@@ -109,7 +109,7 @@ impl Message {
             } else {
                 Vec::new()
             },
-            trailing: self.params().and_then(|params| params.trailing),
+            trailing: self.params().and_then(|params| params.trailing()),
         }
     }
 
@@ -174,7 +174,7 @@ impl Message {
         let command = self.command();
         let cmd_start = self.raw.find(command).unwrap();
         self.raw[cmd_start..].find(' ')
-            .map(|param_start| Params::new(&self.raw[cmd_start + param_start..]))
+            .map(|param_start| Params::from(&self.raw[cmd_start + param_start..]))
     }
 }
 

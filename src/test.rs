@@ -32,7 +32,7 @@ fn test_parse() {
     assert_eq!(iter.next().unwrap(), "param1");
     assert_eq!(iter.next().unwrap(), "param2");
     assert!(iter.next().is_none());
-    assert_eq!(params.trailing.unwrap(), "trailing");
+    assert_eq!(params.trailing().unwrap(), "trailing");
 }
 
 #[test]
@@ -104,7 +104,7 @@ fn test_without_prefix() {
     assert_eq!(iter.next().unwrap(), "param2");
     assert!(iter.next().is_none());
 
-    assert_eq!(params.trailing.unwrap(), "trailing")
+    assert_eq!(params.trailing().unwrap(), "trailing")
 }
 
 #[test]
@@ -130,7 +130,7 @@ fn test_cmd_and_trailing() {
     let mut iter = params.iter();
     assert!(iter.next().is_none());
 
-    assert_eq!(params.trailing.unwrap(), "trailing")
+    assert_eq!(params.trailing().unwrap(), "trailing")
 }
 
 #[test]
@@ -146,7 +146,7 @@ fn test_cmd_and_param() {
     assert_eq!(iter.next().unwrap(), "param1");
     assert!(iter.next().is_none());
 
-    assert!(params.trailing.is_none());
+    assert!(params.trailing().is_none());
 }
 
 #[test]

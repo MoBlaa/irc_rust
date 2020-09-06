@@ -45,7 +45,7 @@ fn bench_parse(b: &mut Bencher) {
         assert_eq!(iter.next().unwrap(), "param1");
         assert_eq!(iter.next().unwrap(), "param2");
         assert!(iter.next().is_none());
-        assert_eq!(params.trailing.unwrap(), "trailing")
+        assert_eq!(params.trailing().unwrap(), "trailing")
         // 793 ns/iter
     });
 }
