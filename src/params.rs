@@ -8,6 +8,15 @@ pub struct Params<'a> {
     pub trailing: Option<&'a str>
 }
 
+impl<'a> Default for Params<'a> {
+    fn default() -> Self {
+        Params {
+            raw: "",
+            trailing: None
+        }
+    }
+}
+
 impl<'a> Params<'a> {
     /// Create a new Parameter list from the given string. Expects the string to be a valid parameter list.
     pub fn new(raw: &'a str) -> Params<'a> {
