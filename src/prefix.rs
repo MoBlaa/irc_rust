@@ -34,10 +34,10 @@ impl<'a> Prefix<'a> {
     // Returns the host if present.
     pub fn user(&self) -> Option<&'a str> {
         self.raw.find('!')
-            .and_then(|start| {
+            .map(|start| {
                 let end = self.raw.find('@')
                     .unwrap_or_else(|| self.raw.len());
-                Some(&self.raw[start + 1..end])
+                &self.raw[start + 1..end]
             })
     }
 }

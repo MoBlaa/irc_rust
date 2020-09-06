@@ -4,7 +4,7 @@ use std::fmt;
 use crate::params::Params;
 use crate::prefix::Prefix;
 use crate::tags::Tags;
-use crate::builder::MessageBuilder;
+use crate::builder::Message as MessageBuilder;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 ///

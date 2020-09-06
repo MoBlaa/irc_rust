@@ -1,4 +1,6 @@
 #![feature(test)]
+#![deny(clippy::all)]
+#![deny(clippy::cargo)]
 
 //! This crate implements a simple irc message wrapper.
 //!
@@ -74,7 +76,7 @@ mod test;
 mod bench;
 
 pub use message::Message;
-pub use builder::MessageBuilder;
+pub use builder::Message as MessageBuilder;
 pub use tags::Tags;
 pub use prefix::Prefix;
 pub use params::Params;
