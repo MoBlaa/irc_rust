@@ -73,7 +73,8 @@ impl<'a> TryFrom<&'a str> for Tags<'a> {
     type Error = InvalidIrcFormatError;
 
     fn try_from(raw: &'a str) -> Result<Self, Self::Error> {
-        let mut tags = HashMap::new();
+        let size = raw.chars().filter(|c| *c == ';').count();
+        let mut tags = HashMap::with_capacity(size);
 
         for key_val in raw.split(';') {
             if key_val.is_empty() {
@@ -93,7 +94,7 @@ impl<'a> TryFrom<&'a str> for Tags<'a> {
             }
             tags.insert(key, value);
         }
-
+        tags.shrink_to_fit();
         Ok(Tags {
             raw,
             tags
@@ -105,10 +106,7 @@ impl<'a> Index<&'a str> for Tags<'a> {
     type Output = str;
 
     fn index(&self, key: &'a str) -> &Self::Output {
-        // Find the key
-        let (start, end) = self.find(key)
-            .expect("no element with key found");
-        &self.raw[start..end]
+        self.tags[key]
     }
 }
 
