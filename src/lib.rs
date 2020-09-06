@@ -29,7 +29,7 @@
 //! Simple example with static string:
 //!
 //! ```
-//! use irc_rust::message::Message;
+//! use irc_rust::Message;
 //!
 //! let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 //!
@@ -39,7 +39,7 @@
 //! While reading from standard input the `Message::new` method has to be used.
 //!
 //! ```
-//! use irc_rust::message::Message;
+//! use irc_rust::Message;
 //! use std::io::{BufRead, stdin};
 //!
 //! for line in stdin().lock().lines() {
@@ -57,13 +57,19 @@
 //!
 //! ```
 
-pub mod message;
-pub mod tags;
-pub mod prefix;
-pub mod params;
+mod message;
+mod tags;
+mod prefix;
+mod params;
 
 #[cfg(test)]
 mod test;
 
 #[cfg(test)]
 mod bench;
+
+pub use message::Message;
+pub use message::MessageBuilder;
+pub use tags::Tags;
+pub use prefix::Prefix;
+pub use params::Params;

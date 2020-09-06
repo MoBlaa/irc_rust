@@ -16,7 +16,7 @@ use crate::tags::Tags;
 /// Create a Message from a plain string.
 ///
 /// ```
-/// use irc_rust::message::Message;
+/// use irc_rust::Message;
 ///
 /// let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 ///
@@ -26,7 +26,7 @@ use crate::tags::Tags;
 /// To build a message in a verbose and easy to read way you can use the `Message::builder` method and the `MessageBuilder`.
 ///
 /// ```
-/// use irc_rust::message::Message;
+/// use irc_rust::Message;
 ///
 /// let message = Message::builder()
 ///         .tag("key1", "value1")
@@ -48,7 +48,7 @@ use crate::tags::Tags;
 /// To alter existing parameters the `set_param` method can be used.
 ///
 /// ```
-/// use irc_rust::message::Message;
+/// use irc_rust::Message;
 ///
 /// let message = Message::from("@key=value :name!user@host CMD param1 :trailing!").to_builder()
 ///     .tag("key", "value2")
@@ -58,7 +58,7 @@ use crate::tags::Tags;
 ///     .build();
 /// assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
 /// ```
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Eq, Ord, PartialOrd, PartialEq)]
 pub struct Message {
     raw: String
 }
