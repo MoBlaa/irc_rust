@@ -4,7 +4,7 @@ IRC Helper easing the access and creation of IRC Messages.
 ## Basic Usage
 
 ```
-use irc_rust::message::Message;
+use irc_rust::Message;
 
 let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 

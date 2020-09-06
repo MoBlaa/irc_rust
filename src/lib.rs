@@ -30,7 +30,7 @@
 //!
 //! Simple example with static string:
 //!
-//! ```
+//! ```rust
 //! use irc_rust::Message;
 //!
 //! let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
@@ -40,7 +40,7 @@
 //!
 //! While reading from standard input the `Message::new` method has to be used.
 //!
-//! ```
+//! ```rust
 //! use irc_rust::Message;
 //! use std::io::{BufRead, stdin};
 //!
