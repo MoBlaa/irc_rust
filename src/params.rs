@@ -2,29 +2,18 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 
 /// Parameter list with an optional trailing message.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash, Default)]
 pub struct Params<'a> {
     raw: &'a str,
     pub trailing: Option<&'a str>
 }
 
-impl<'a> Default for Params<'a> {
-    fn default() -> Self {
+impl<'a> Params<'a> {
+    /// Create a new Parameter list from the given string. Expects the string to be a valid parameter list.
+    pub fn new() -> Params<'a> {
         Params {
             raw: "",
             trailing: None
-        }
-    }
-}
-
-impl<'a> Params<'a> {
-    /// Create a new Parameter list from the given string. Expects the string to be a valid parameter list.
-    pub fn new(raw: &'a str) -> Params<'a> {
-        let trailing = raw.find(" :").map(|index| &raw[index + 2..]);
-
-        Params {
-            raw,
-            trailing
         }
     }
 
@@ -42,5 +31,16 @@ impl<'a> Params<'a> {
 impl<'a> fmt::Display for Params<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.raw)
+    }
+}
+
+impl<'a> From<&'a str> for Params<'a> {
+    fn from(raw: &'a str) -> Self {
+        let trailing = raw.find(" :").map(|index| &raw[index + 2..]);
+
+        Params {
+            raw,
+            trailing
+        }
     }
 }
