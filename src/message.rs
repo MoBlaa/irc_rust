@@ -104,7 +104,7 @@ impl Message {
     /// Returns tags if any are present.
     pub fn tags(&self) -> Option<Tags> {
         if self.raw.starts_with('@') {
-            self.raw.find(' ').map(|index| Tags::new(&self.raw[1..index]))
+            self.raw.find(' ').map(|index| Tags::from(&self.raw[1..index]))
         } else {
             None
         }
@@ -121,8 +121,8 @@ impl Message {
         match self.raw.chars().nth(offset) {
             Some(':') => {
                 match self.raw[offset..].find(' ') {
-                    Some(index) => Some(Prefix::new(&self.raw[offset + 1..offset + index])),
-                    None => Some(Prefix::new(&self.raw[offset + 1..]))
+                    Some(index) => Some(Prefix::from(&self.raw[offset + 1..offset + index])),
+                    None => Some(Prefix::from(&self.raw[offset + 1..]))
                 }
             }
             _ => None

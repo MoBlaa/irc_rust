@@ -10,9 +10,9 @@ pub struct Tags<'a> {
 
 impl<'a> Tags<'a> {
     /// Create a new Tag map from the given string. Expects it to be in valid IRCv3 format.
-    pub fn new(raw: &'a str) -> Tags<'a> {
+    pub fn new() -> Tags<'a> {
         Tags {
-            raw,
+            raw: "",
         }
     }
 
@@ -55,6 +55,14 @@ impl<'a> Tags<'a> {
     }
 }
 
+impl<'a> From<&'a str> for Tags<'a> {
+    fn from(raw: &'a str) -> Self {
+        Tags {
+            raw
+        }
+    }
+}
+
 impl<'a> Index<&'a str> for Tags<'a> {
     type Output = str;
 
@@ -78,7 +86,7 @@ mod tests {
 
     #[test]
     fn test_get_and_index() {
-        let tags = Tags::new("hello=world;whats=goes");
+        let tags = Tags::from("hello=world;whats=goes");
         let get = tags.get("hello");
         let index = &tags["hello"];
         assert_eq!(get, Some("world"));
