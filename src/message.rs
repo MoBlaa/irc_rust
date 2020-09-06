@@ -5,10 +5,14 @@ use crate::params::Params;
 use crate::prefix::Prefix;
 use crate::tags::Tags;
 use crate::builder::Message as MessageBuilder;
+use crate::errors::InvalidIrcFormatError;
+use std::convert::TryFrom;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 ///
 /// All types returned from getters of this type ([Prefix, Params, Tags]) are owned types. So they are tied to the [Message] instance they are retrieved from and don't own their part of the message.
+///
+/// Parses its part lazily on method invokations.
 ///
 /// # Examples
 ///
@@ -79,14 +83,14 @@ impl Message {
 
     /// Creates a builder from this message. Only initializes fields already present in the message.
     /// By using this method a whole new Message will be created.
-    pub fn to_builder(&self) -> MessageBuilder<'_> {
+    pub fn to_builder(&self) -> Result<MessageBuilder<'_>, InvalidIrcFormatError> {
         let mut builder = MessageBuilder::new();
-        if let Some(tags) = self.tags() {
+        if let Some(tags) = self.tags()? {
             for (key, value) in tags.iter() {
                 builder = builder.tag(key, value)
             }
         }
-        if let Some(prefix) = self.prefix() {
+        if let Some(prefix) = self.prefix()? {
             builder = builder.prefix_name(prefix.name());
             if let Some(prefix_user) = prefix.user() {
                 builder = builder.prefix_user(prefix_user);
@@ -105,27 +109,33 @@ impl Message {
             }
         }
 
-        builder
+        Ok(builder)
     }
 
     /// Returns tags if any are present.
-    pub fn tags(&self) -> Option<Tags> {
+    pub fn tags(&self) -> Result<Option<Tags>, InvalidIrcFormatError> {
         if self.raw.starts_with('@') {
-            self.raw.find(' ').map(|index| Tags::from(&self.raw[1..index]))
+            let end = self.raw.find(' ');
+            if let Some(end) = end {
+                Tags::try_from(&self.raw[1..end])
+                    .map(Some)
+            } else {
+                Err(InvalidIrcFormatError::NoTagEnd(self.raw.clone()))
+            }
         } else {
-            None
+            Ok(None)
         }
     }
 
     /// Returns the Prefix if present.
-    pub fn prefix(&self) -> Option<Prefix> {
+    pub fn prefix(&self) -> Result<Option<Prefix>, InvalidIrcFormatError> {
         let offset = self.tags()
             // Set offset if tags exist
             .map(|tags| {
                 // + '@' + ' '
-                tags.len() + 2
-            }).unwrap_or(0);
-        match self.raw.chars().nth(offset) {
+                tags.map(|tags| tags.len() + 2)
+            })?.unwrap_or(0);
+        Ok(match self.raw.chars().nth(offset) {
             Some(':') => {
                 match self.raw[offset..].find(' ') {
                     Some(index) => Some(Prefix::from(&self.raw[offset + 1..offset + index])),
@@ -133,7 +143,7 @@ impl Message {
                 }
             }
             _ => None
-        }
+        })
     }
 
     /// Returns the command the message represents.

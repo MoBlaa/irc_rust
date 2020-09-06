@@ -1,11 +1,18 @@
 use std::ops::Index;
 use core::fmt;
+use std::collections::HashMap;
+use crate::errors::InvalidIrcFormatError;
+use std::convert::TryFrom;
 
 /// Tag Map as described through IRCv3.
-#[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash, Default)]
+///
+/// test bench::bench_tag_create    ... bench:           1 ns/iter (+/- 0)
+// test bench::bench_tag_index     ... bench:      14,707 ns/iter (+/- 2,811)
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Tags<'a> {
     raw: &'a str,
+    tags: HashMap<&'a str, &'a str>
 }
 
 impl<'a> Tags<'a> {
@@ -13,16 +20,17 @@ impl<'a> Tags<'a> {
     pub fn new() -> Tags<'a> {
         Tags {
             raw: "",
+            tags: HashMap::new()
         }
     }
 
     /// Character length of the tags if formatted as IRC string.
     pub fn len(&self) -> usize {
-        self.raw.len()
+        self.tags.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.raw.is_empty()
+        self.tags.is_empty()
     }
 
     /// Iterator over the tag entries.
@@ -55,11 +63,34 @@ impl<'a> Tags<'a> {
     }
 }
 
-impl<'a> From<&'a str> for Tags<'a> {
-    fn from(raw: &'a str) -> Self {
-        Tags {
-            raw
+
+
+impl<'a> TryFrom<&'a str> for Tags<'a> {
+    type Error = InvalidIrcFormatError;
+
+    fn try_from(raw: &'a str) -> Result<Self, Self::Error> {
+        let mut tags = HashMap::new();
+
+        for key_val in raw.split(';') {
+            let mut split = key_val.split('=');
+            let key = match split.next() {
+                Some(key) => key,
+                None => return Err(InvalidIrcFormatError::Tag(raw.to_string()))
+            };
+            let value = match split.next() {
+                Some(value) => value,
+                None => return Err(InvalidIrcFormatError::Tag(raw.to_string()))
+            };
+            if split.next().is_some() {
+               return Err(InvalidIrcFormatError::Tag(raw.to_string()));
+            }
+            tags.insert(key, value);
         }
+
+        Ok(Tags {
+            raw,
+            tags
+        })
     }
 }
 
@@ -89,10 +120,11 @@ impl<'a> AsRef<str> for Tags<'a> {
 #[cfg(test)]
 mod tests {
     use crate::tags::Tags;
+    use std::str::FromStr;
 
     #[test]
     fn test_get_and_index() {
-        let tags = Tags::from("hello=world;whats=goes");
+        let tags = Tags::from_str("hello=world;whats=goes");
         let get = tags.get("hello");
         let index = &tags["hello"];
         assert_eq!(get, Some("world"));

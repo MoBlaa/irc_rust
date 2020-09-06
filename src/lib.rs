@@ -68,6 +68,7 @@ mod builder;
 mod tags;
 mod prefix;
 mod params;
+mod errors;
 
 #[cfg(test)]
 mod test;
@@ -80,3 +81,4 @@ pub use builder::Message as MessageBuilder;
 pub use tags::Tags;
 pub use prefix::Prefix;
 pub use params::Params;
+pub use errors::{MessageBuildError, InvalidIrcFormatError};
