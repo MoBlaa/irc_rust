@@ -6,6 +6,7 @@ use test::Bencher;
 use rand::Rng;
 
 use crate::message::Message;
+use crate::Params;
 
 #[bench]
 fn bench_parse(b: &mut Bencher) {
@@ -73,7 +74,7 @@ fn bench_tag_index(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_params(b: &mut Bencher) {
+fn bench_params_iter(b: &mut Bencher) {
     let mut str = String::from("CMD");
     for _ in 0..100 {
         str.push_str(" param");
@@ -84,5 +85,18 @@ fn bench_params(b: &mut Bencher) {
         for param in message.params().unwrap().iter() {
             assert_eq!(param, "param")
         }
+    });
+}
+
+#[bench]
+fn bench_params_create(b: &mut Bencher) {
+    let mut str = String::new();
+    for _ in 0..100 {
+        str.push_str(" param");
+    }
+
+    b.iter(|| {
+        let params = Params::from(str.as_str());
+        assert_eq!(params.as_ref(), str.as_str());
     });
 }
