@@ -46,7 +46,7 @@ fn test_tags() {
     let val = &tags["tag2"];
     assert_eq!(val, "value2");
 
-    let mut tags = message.tags().unwrap().unwrap().iter();
+    let mut tags = tags.iter();
     let (key, val) = tags.next().unwrap();
     assert_eq!(key, "tag1");
     assert_eq!(val, "value1");

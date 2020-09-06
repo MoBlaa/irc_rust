@@ -12,7 +12,7 @@ use std::convert::TryFrom;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Tags<'a> {
     raw: &'a str,
-    tags: HashMap<&'a str, &'a str>
+    tags: HashMap<&'a str, &'a str>,
 }
 
 impl<'a> Tags<'a> {
@@ -20,7 +20,7 @@ impl<'a> Tags<'a> {
     pub fn new() -> Tags<'a> {
         Tags {
             raw: "",
-            tags: HashMap::new()
+            tags: HashMap::new(),
         }
     }
 
@@ -68,7 +68,6 @@ impl<'a> Tags<'a> {
 }
 
 
-
 impl<'a> TryFrom<&'a str> for Tags<'a> {
     type Error = InvalidIrcFormatError;
 
@@ -90,14 +89,14 @@ impl<'a> TryFrom<&'a str> for Tags<'a> {
                 None => return Err(InvalidIrcFormatError::Tag(raw.to_string()))
             };
             if split.next().is_some() {
-               return Err(InvalidIrcFormatError::Tag(raw.to_string()));
+                return Err(InvalidIrcFormatError::Tag(raw.to_string()));
             }
             tags.insert(key, value);
         }
         tags.shrink_to_fit();
         Ok(Tags {
             raw,
-            tags
+            tags,
         })
     }
 }
@@ -130,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_get_and_index() -> Result<(), InvalidIrcFormatError> {
-        let tags = Tags::try_from("hello=world;whats=goes")?;
+        let tags = Tags::try_from("hello=world;whats=goes;hello2=world2")?;
         let get = tags.get("hello");
         let index = &tags["hello"];
         assert_eq!(get, Some("world"));
