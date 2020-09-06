@@ -62,6 +62,7 @@
 extern crate serde;
 
 mod message;
+mod builder;
 mod tags;
 mod prefix;
 mod params;
@@ -73,7 +74,7 @@ mod test;
 mod bench;
 
 pub use message::Message;
-pub use message::MessageBuilder;
+pub use builder::MessageBuilder;
 pub use tags::Tags;
 pub use prefix::Prefix;
 pub use params::Params;
