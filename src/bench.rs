@@ -6,7 +6,7 @@ use test::Bencher;
 use rand::Rng;
 
 use crate::message::Message;
-use crate::{Params, Tags};
+use crate::{Params, Tags, InvalidIrcFormatError};
 use std::convert::TryFrom;
 
 #[bench]
@@ -81,17 +81,15 @@ fn bench_tag_create(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_tag_index(b: &mut Bencher) {
-    let mut str = String::from("@");
+fn bench_tag_index(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
+    let mut str = String::from("");
     for i in 0..1000 {
         str = format!("{}key{}=value{}", str, i, i);
         if i != 1000 {
             str.push(';');
         }
     }
-    str.push_str(" CMD");
-    let message = Message::from(str);
-    let tags = message.tags().unwrap().unwrap();
+    let tags = Tags::try_from(str.as_str())?;
 
     b.iter(|| {
         let mut rng = rand::thread_rng();
@@ -99,7 +97,9 @@ fn bench_tag_index(b: &mut Bencher) {
         let skey = format!("key{}", ikey);
         let val = &tags[&skey];
         assert_eq!(val, format!("value{}", ikey));
-    })
+    });
+
+    Ok(())
 }
 
 #[bench]
