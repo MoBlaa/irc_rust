@@ -120,11 +120,12 @@ impl<'a> AsRef<str> for Tags<'a> {
 #[cfg(test)]
 mod tests {
     use crate::tags::Tags;
-    use std::str::FromStr;
+    use std::convert::TryFrom;
+    use crate::InvalidIrcFormatError;
 
     #[test]
-    fn test_get_and_index() {
-        let tags = Tags::from_str("hello=world;whats=goes");
+    fn test_get_and_index() -> Result<(), InvalidIrcFormatError> {
+        let tags = Tags::try_from("hello=world;whats=goes")?;
         let get = tags.get("hello");
         let index = &tags["hello"];
         assert_eq!(get, Some("world"));
@@ -137,5 +138,6 @@ mod tests {
         // Would panic
         // let index = &tags["world"];
         assert_eq!(get, None);
+        Ok(())
     }
 }

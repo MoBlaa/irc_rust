@@ -7,6 +7,7 @@ use rand::Rng;
 
 use crate::message::Message;
 use crate::{Params, Tags};
+use std::convert::TryFrom;
 
 #[bench]
 fn bench_parse(b: &mut Bencher) {
@@ -16,14 +17,14 @@ fn bench_parse(b: &mut Bencher) {
     b.iter(move || {
         let message = Message::from(raw);
 
-        let tags = message.tags().unwrap();
+        let tags = message.tags().unwrap().unwrap();
         let val = &tags["key1"];
         assert_eq!(val, "value1");
         let val = &tags["key2"];
         assert_eq!(val, "value2");
         // 189 ns/iter
 
-        let mut tags = message.tags().unwrap().iter();
+        let mut tags = message.tags().unwrap().unwrap().iter();
         let (key, val) = tags.next().unwrap();
         assert_eq!(key, "key1");
         assert_eq!(val, "value1");
@@ -32,7 +33,7 @@ fn bench_parse(b: &mut Bencher) {
         assert_eq!(val, "value2");
         // 319 ns/iter
 
-        let prefix = message.prefix().unwrap();
+        let prefix = message.prefix().unwrap().unwrap();
         assert_eq!(prefix.name(), "name");
         assert_eq!(prefix.user().unwrap(), "user");
         assert_eq!(prefix.host().unwrap(), "host");
@@ -62,7 +63,7 @@ fn bench_tag_create(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let tags = Tags::from(str.as_str());
+        let tags = Tags::try_from(str.as_str()).unwrap();
         assert_eq!(tags.as_ref(), str.as_str());
     })
 }
@@ -78,7 +79,7 @@ fn bench_tag_index(b: &mut Bencher) {
     }
     str.push_str(" CMD");
     let message = Message::from(str);
-    let tags = message.tags().unwrap();
+    let tags = message.tags().unwrap().unwrap();
 
     b.iter(|| {
         let mut rng = rand::thread_rng();
