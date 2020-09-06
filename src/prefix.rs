@@ -17,9 +17,9 @@ impl<'a> fmt::Display for Prefix<'a> {
 
 impl<'a> Prefix<'a> {
     /// Create a new Prefix from the given string. Expects the string to be a valid prefix string.
-    pub fn new(raw: &'a str) -> Prefix<'a> {
+    pub fn new() -> Prefix<'a> {
         Prefix {
-            raw
+            raw: ""
         }
     }
 
@@ -45,5 +45,13 @@ impl<'a> Prefix<'a> {
                     .unwrap_or_else(|| self.raw.len());
                 Some(&self.raw[start + 1..end])
             })
+    }
+}
+
+impl<'a> From<&'a str> for Prefix<'a> {
+    fn from(raw: &'a str) -> Self {
+        Prefix {
+            raw
+        }
     }
 }
