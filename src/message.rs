@@ -65,20 +65,6 @@ pub struct Message {
 }
 
 impl Message {
-    /// Create a new Message from the given string. Expects the string to be in a valid irc format.
-    pub fn new(raw: String) -> Message {
-        Message {
-            raw
-        }
-    }
-
-    // Create a new Message from the given String view. Expects the string to be in a valid irc format.
-    pub fn from(raw: &str) -> Message {
-        Message {
-            raw: raw.to_string()
-        }
-    }
-
     /// Creates a message builder as alternative to building an irc string before creating the message.
     pub fn builder<'a>() -> MessageBuilder<'a> {
         MessageBuilder {
@@ -182,6 +168,22 @@ impl Message {
 impl Display for Message {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.raw)
+    }
+}
+
+impl From<String> for Message {
+    fn from(raw: String) -> Self {
+        Message {
+            raw
+        }
+    }
+}
+
+impl From<&str> for Message {
+    fn from(raw: &str) -> Self {
+        Message {
+            raw: raw.to_string()
+        }
     }
 }
 
@@ -305,7 +307,7 @@ mod tests {
 
     #[test]
     fn test_serde() {
-        let message = Message::new("@test=test :user@prefix!host COMMAND param :trailing".to_string());
+        let message = Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
         let serialized = serde_json::to_string(&message).unwrap();
         println!("Ser: {}", serialized);
         let deserialized: Message = serde_json::from_str(serialized.as_str()).unwrap();

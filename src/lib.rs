@@ -45,7 +45,7 @@
 //! for line in stdin().lock().lines() {
 //!     match line {
 //!         Ok(line) => {
-//!             let message = Message::new(line);
+//!             let message = Message::from(line);
 //!             println!("> Received command: {}", message.command());
 //!         }
 //!         Err(e) => {

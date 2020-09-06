@@ -61,7 +61,7 @@ fn bench_tag_index(b: &mut Bencher) {
         }
     }
     str.push_str(" CMD");
-    let message = Message::new(str);
+    let message = Message::from(str);
     let tags = message.tags().unwrap();
 
     b.iter(|| {
@@ -79,7 +79,7 @@ fn bench_params_iter(b: &mut Bencher) {
     for _ in 0..100 {
         str.push_str(" param");
     }
-    let message = Message::new(str);
+    let message = Message::from(str);
 
     b.iter(|| {
         for param in message.params().unwrap().iter() {
