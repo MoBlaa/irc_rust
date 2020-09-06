@@ -1,4 +1,5 @@
 use std::ops::Index;
+use core::fmt;
 
 /// Tag Map as described through IRCv3.
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash, Default)]
@@ -62,6 +63,12 @@ impl<'a> Index<&'a str> for Tags<'a> {
         let (start, end) = self.find(key)
             .expect("no element with key found");
         &self.raw[start..end]
+    }
+}
+
+impl<'a> fmt::Display for Tags<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.raw.fmt(f)
     }
 }
 
