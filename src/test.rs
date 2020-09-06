@@ -185,7 +185,8 @@ fn test_message_builder() {
         .command("CMD")
         .param("param1").param("param2")
         .trailing("trailing")
-        .build();
+        .build()
+        .expect("failed to build message");
     let str = message.to_string();
     assert!(str.as_str() == "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing" || str.as_str() == "@key2=value2;key1=value1 :name!user@host CMD param1 param2 :trailing");
 
@@ -195,7 +196,8 @@ fn test_message_builder() {
         .param("param2")
         .set_param(1, "param3")
         .trailing("other trailing!")
-        .build();
+        .build()
+        .expect("failed building message");
     let str = message.to_string();
     assert!(str.as_str() == "@key1=value3;key2=value2 :name1!user@host CMD param1 param3 param2 :other trailing!" || str.as_str() == "@key2=value2;key1=value3 :name1!user@host CMD param1 param3 param2 :other trailing!");
 }

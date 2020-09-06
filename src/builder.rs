@@ -1,7 +1,29 @@
 use std::collections::HashMap;
 use crate::Message;
+use core::fmt;
+use std::error::Error;
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum MessageBuildError {
+    UserWithoutHost,
+    MissingCommand
+}
+
+impl fmt::Display for MessageBuildError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let message = match self {
+            MessageBuildError::UserWithoutHost => "irc prefix can only contain a user if host is also present",
+            MessageBuildError::MissingCommand => "irc message requires an command"
+        };
+
+        write!(f, "{}", message)
+    }
+}
+
+impl Error for MessageBuildError {}
 
 /// A MessageBuilder for a simpler generation of a message instead of building an string first.
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct MessageBuilder<'a> {
     tags: HashMap<&'a str, &'a str>,
     prefix_name: Option<&'a str>,
@@ -80,7 +102,7 @@ impl<'a> MessageBuilder<'a> {
     }
 
     /// Create a Message instance and return if valid.
-    pub fn build(self) -> Message {
+    pub fn build(self) -> Result<Message, MessageBuildError> {
         let mut str = String::new();
         if !self.tags.is_empty() {
             str.push('@');
@@ -97,7 +119,7 @@ impl<'a> MessageBuilder<'a> {
             str.push(':');
             str.push_str(prefix_name);
             if self.prefix_user.is_some() && self.prefix_host.is_none() {
-                panic!("irc prefix can only contain a user if host is also present");
+                return Err(MessageBuildError::UserWithoutHost);
             }
             if let Some(user) = self.prefix_user {
                 str.push('!');
@@ -112,7 +134,7 @@ impl<'a> MessageBuilder<'a> {
         if let Some(command) = self.command {
             str.push_str(command);
         } else {
-            panic!("irc message requires an command");
+            return Err(MessageBuildError::MissingCommand);
         }
         if !self.params.is_empty() {
             str.push(' ');
@@ -122,6 +144,6 @@ impl<'a> MessageBuilder<'a> {
             str.push_str(" :");
             str.push_str(trailing);
         }
-        Message::from(str)
+        Ok(Message::from(str))
     }
 }

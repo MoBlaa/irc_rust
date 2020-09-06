@@ -36,11 +36,11 @@ use crate::builder::MessageBuilder;
 ///         .command("CMD")
 ///         .param("param1").param("param2")
 ///         .trailing("trailing")
-///         .build();
+///         .build()
+///         .expect("failed to build message");
 ///
 /// let tags = message.tags().unwrap();
-/// println!("key1={}", &tags["key1"]) // Prints 'key1=value1'
-///
+/// println!("key1={}", &tags["key1"]); // Prints 'key1=value1'
 /// ```
 ///
 /// You can create a new message from an existing message by calling the `to_builder` method.
@@ -54,7 +54,8 @@ use crate::builder::MessageBuilder;
 ///     .param("param2")
 ///     .param("param4")
 ///     .set_param(1, "param3")
-///     .build();
+///     .build()
+///     .expect("failed to build message");
 /// assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
 /// ```
 #[derive(Debug, Clone, Eq, Ord, PartialOrd, PartialEq, Hash)]
