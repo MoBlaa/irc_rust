@@ -65,7 +65,7 @@ fn bench_parse(b: &mut Bencher) {
 #[bench]
 fn bench_tag_create(b: &mut Bencher) {
     let mut str = String::new();
-    for i in 0..1000 {
+    for i in 0..20 {
         str = format!("{}key{}=value{}", str, i, i);
         if i != 1000 {
             str.push(';');
