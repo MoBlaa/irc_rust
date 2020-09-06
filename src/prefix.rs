@@ -1,3 +1,5 @@
+use std::fmt;
+
 /// Message prefix containing a name (servername or nickname) and optional
 /// user and host. If the user and host are set the name is semantically
 /// seen as the nickname.
@@ -7,9 +9,9 @@ pub struct Prefix<'a> {
     raw: &'a str
 }
 
-impl<'a> ToString for Prefix<'a> {
-    fn to_string(&self) -> String {
-        self.raw.to_string()
+impl<'a> fmt::Display for Prefix<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.raw.fmt(f)
     }
 }
 

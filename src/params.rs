@@ -37,7 +37,7 @@ impl<'a> Params<'a> {
 
 impl<'a> fmt::Display for Params<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.raw)
+        self.raw.fmt(f)
     }
 }
 

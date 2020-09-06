@@ -168,7 +168,7 @@ impl Message {
 
 impl Display for Message {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.raw)
+        self.raw.fmt(f)
     }
 }
 
