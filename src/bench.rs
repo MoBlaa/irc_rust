@@ -17,14 +17,19 @@ fn bench_parse(b: &mut Bencher) {
     b.iter(move || {
         let message = Message::from(raw);
 
-        let tags = message.tags().unwrap().unwrap();
+        let tags = message.tags();
+        assert!(tags.is_ok(), "{:?}", tags);
+        let tags = tags.unwrap();
+        assert!(tags.is_some());
+        let tags = tags.unwrap();
+
         let val = &tags["key1"];
         assert_eq!(val, "value1");
         let val = &tags["key2"];
         assert_eq!(val, "value2");
         // 189 ns/iter
 
-        let mut tags = message.tags().unwrap().unwrap().iter();
+        let mut tags = tags.iter();
         let (key, val) = tags.next().unwrap();
         assert_eq!(key, "key1");
         assert_eq!(val, "value1");
@@ -33,10 +38,15 @@ fn bench_parse(b: &mut Bencher) {
         assert_eq!(val, "value2");
         // 319 ns/iter
 
-        let prefix = message.prefix().unwrap().unwrap();
+        let prefix = message.prefix();
+        assert!(prefix.is_ok());
+        let prefix = prefix.unwrap();
+        assert!(prefix.is_some());
+        let prefix = prefix.unwrap();
+
         assert_eq!(prefix.name(), "name");
-        assert_eq!(prefix.user().unwrap(), "user");
-        assert_eq!(prefix.host().unwrap(), "host");
+        assert_eq!(prefix.user(), Some("user"));
+        assert_eq!(prefix.host(), Some("host"));
         // 519 ns/iter
 
         assert_eq!(message.command(), "CMD");
@@ -63,7 +73,9 @@ fn bench_tag_create(b: &mut Bencher) {
     }
 
     b.iter(|| {
-        let tags = Tags::try_from(str.as_str()).unwrap();
+        let tags = Tags::try_from(str.as_str());
+        assert!(tags.is_ok(), "{:?}", tags);
+        let tags = tags.unwrap();
         assert_eq!(tags.as_ref(), str.as_str());
     })
 }

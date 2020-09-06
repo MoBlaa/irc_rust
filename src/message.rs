@@ -133,7 +133,7 @@ impl Message {
             // Set offset if tags exist
             .map(|tags| {
                 // + '@' + ' '
-                tags.map(|tags| tags.len() + 2)
+                tags.map(|tags| tags.len_raw() + 2)
             })?.unwrap_or(0);
         Ok(match self.raw.chars().nth(offset) {
             Some(':') => {
@@ -210,11 +210,30 @@ mod tests {
     use crate::message::Message;
 
     #[test]
+    #[cfg(feature = "serde")]
     fn test_serde() {
         let message = Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
         let serialized = serde_json::to_string(&message).unwrap();
         println!("Ser: {}", serialized);
         let deserialized: Message = serde_json::from_str(serialized.as_str()).unwrap();
         assert_eq!(deserialized.to_string(), message.to_string());
+    }
+
+    #[test]
+    fn test_tags() {
+        let message = Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
+        let tags = message.tags();
+        assert!(tags.is_ok(), "{:?}", tags);
+        let tags = tags.unwrap();
+        assert!(tags.is_some(), "{:?}", tags);
+    }
+
+    #[test]
+    fn test_prefix() {
+        let message = Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
+        let prefix = message.prefix();
+        assert!(prefix.is_ok(), "{:?}", prefix);
+        let prefix = prefix.unwrap();
+        assert!(prefix.is_some(), "{:?}", prefix);
     }
 }

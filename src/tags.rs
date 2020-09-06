@@ -25,6 +25,10 @@ impl<'a> Tags<'a> {
     }
 
     /// Character length of the tags if formatted as IRC string.
+    pub fn len_raw(&self) -> usize {
+        self.raw.len()
+    }
+
     pub fn len(&self) -> usize {
         self.tags.len()
     }
@@ -72,6 +76,9 @@ impl<'a> TryFrom<&'a str> for Tags<'a> {
         let mut tags = HashMap::new();
 
         for key_val in raw.split(';') {
+            if key_val.is_empty() {
+                continue;
+            }
             let mut split = key_val.split('=');
             let key = match split.next() {
                 Some(key) => key,
