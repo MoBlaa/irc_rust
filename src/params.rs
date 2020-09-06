@@ -1,4 +1,8 @@
+use core::fmt;
+use serde::{Deserialize, Serialize};
+
 /// Parameter list with an optional trailing message.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash)]
 pub struct Params<'a> {
     raw: &'a str,
     pub trailing: Option<&'a str>
@@ -26,8 +30,8 @@ impl<'a> Params<'a> {
     }
 }
 
-impl<'a> ToString for Params<'a> {
-    fn to_string(&self) -> String {
-        self.raw.to_string()
+impl<'a> fmt::Display for Params<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.raw)
     }
 }
