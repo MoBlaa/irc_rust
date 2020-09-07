@@ -1,11 +1,11 @@
-use std::fmt::{Display, Formatter};
 use std::fmt;
+use std::fmt::{Display, Formatter};
 
+use crate::builder::Message as MessageBuilder;
+use crate::errors::InvalidIrcFormatError;
 use crate::params::Params;
 use crate::prefix::Prefix;
 use crate::tags::Tags;
-use crate::builder::Message as MessageBuilder;
-use crate::errors::InvalidIrcFormatError;
 use std::convert::TryFrom;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
@@ -72,7 +72,7 @@ use std::convert::TryFrom;
 #[derive(Debug, Clone, Eq, Ord, PartialOrd, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Message {
-    raw: String
+    raw: String,
 }
 
 impl Message {
@@ -117,8 +117,7 @@ impl Message {
         if self.raw.starts_with('@') {
             let end = self.raw.find(' ');
             if let Some(end) = end {
-                Tags::try_from(&self.raw[1..end])
-                    .map(Some)
+                Tags::try_from(&self.raw[1..end]).map(Some)
             } else {
                 Err(InvalidIrcFormatError::NoTagEnd(self.raw.clone()))
             }
@@ -129,20 +128,20 @@ impl Message {
 
     /// Returns the Prefix if present.
     pub fn prefix(&self) -> Result<Option<Prefix>, InvalidIrcFormatError> {
-        let offset = self.tags()
+        let offset = self
+            .tags()
             // Set offset if tags exist
             .map(|tags| {
                 // + '@' + ' '
                 tags.map(|tags| tags.len_raw() + 2)
-            })?.unwrap_or(0);
+            })?
+            .unwrap_or(0);
         Ok(match self.raw.chars().nth(offset) {
-            Some(':') => {
-                match self.raw[offset..].find(' ') {
-                    Some(index) => Some(Prefix::from(&self.raw[offset + 1..offset + index])),
-                    None => Some(Prefix::from(&self.raw[offset + 1..]))
-                }
-            }
-            _ => None
+            Some(':') => match self.raw[offset..].find(' ') {
+                Some(index) => Some(Prefix::from(&self.raw[offset + 1..offset + index])),
+                None => Some(Prefix::from(&self.raw[offset + 1..])),
+            },
+            _ => None,
         })
     }
 
@@ -156,7 +155,7 @@ impl Message {
                     &self.raw
                 }
             }
-            None => &self.raw
+            None => &self.raw,
         };
         let without_prefix = match without_tags.find(' ') {
             Some(start) => {
@@ -166,11 +165,11 @@ impl Message {
                     without_tags
                 }
             }
-            None => &self.raw
+            None => &self.raw,
         };
         match without_prefix.find(' ') {
             Some(end) => &without_prefix[..end],
-            None => without_prefix
+            None => without_prefix,
         }
     }
 
@@ -178,7 +177,8 @@ impl Message {
     pub fn params(&self) -> Option<Params> {
         let command = self.command();
         let cmd_start = self.raw.find(command).unwrap();
-        self.raw[cmd_start..].find(' ')
+        self.raw[cmd_start..]
+            .find(' ')
             .map(|param_start| Params::from(&self.raw[cmd_start + param_start..]))
     }
 }
@@ -191,16 +191,14 @@ impl Display for Message {
 
 impl From<String> for Message {
     fn from(raw: String) -> Self {
-        Message {
-            raw
-        }
+        Message { raw }
     }
 }
 
 impl From<&str> for Message {
     fn from(raw: &str) -> Self {
         Message {
-            raw: raw.to_string()
+            raw: raw.to_string(),
         }
     }
 }
@@ -212,7 +210,8 @@ mod tests {
     #[test]
     #[cfg(feature = "serde")]
     fn test_serde() {
-        let message = Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
+        let message =
+            Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
         let serialized = serde_json::to_string(&message).unwrap();
         println!("Ser: {}", serialized);
         let deserialized: Message = serde_json::from_str(serialized.as_str()).unwrap();
@@ -221,7 +220,8 @@ mod tests {
 
     #[test]
     fn test_tags() {
-        let message = Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
+        let message =
+            Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
         let tags = message.tags();
         assert!(tags.is_ok(), "{:?}", tags);
         let tags = tags.unwrap();
@@ -230,7 +230,8 @@ mod tests {
 
     #[test]
     fn test_prefix() {
-        let message = Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
+        let message =
+            Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
         let prefix = message.prefix();
         assert!(prefix.is_ok(), "{:?}", prefix);
         let prefix = prefix.unwrap();

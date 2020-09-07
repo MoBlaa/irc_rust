@@ -1,4 +1,3 @@
-#![feature(test)]
 #![deny(clippy::all)]
 #![deny(clippy::cargo)]
 
@@ -63,22 +62,19 @@
 #[macro_use]
 extern crate serde;
 
-mod message;
 mod builder;
-mod tags;
-mod prefix;
-mod params;
 mod errors;
+mod message;
+mod params;
+mod prefix;
+mod tags;
 
 #[cfg(test)]
 mod test;
 
-#[cfg(test)]
-mod bench;
-
-pub use message::Message;
 pub use builder::Message as MessageBuilder;
-pub use tags::Tags;
-pub use prefix::Prefix;
+pub use errors::{InvalidIrcFormatError, MessageBuildError};
+pub use message::Message;
 pub use params::Params;
-pub use errors::{MessageBuildError, InvalidIrcFormatError};
+pub use prefix::Prefix;
+pub use tags::Tags;

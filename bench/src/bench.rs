@@ -1,12 +1,10 @@
 extern crate rand;
 extern crate test;
 
+use rand::Rng;
 use test::Bencher;
 
-use rand::Rng;
-
-use crate::message::Message;
-use crate::{Params, Tags, InvalidIrcFormatError};
+use irc_rust::{InvalidIrcFormatError, Message, Params, Tags};
 use std::convert::TryFrom;
 
 #[bench]
