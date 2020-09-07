@@ -198,7 +198,7 @@ jobs:
       - name: Benchmarks
         # Currently fails to extract benchmark information https://github.com/rhysd/github-action-benchmark/issues/39
         # Thats why '::' is replaced with ' '
-        run: cargo +nightly bench | sed 's/::/ /' | tee output.txt
+        run: cargo +nightly bench | sed 's/::/__/' | tee output.txt
       - name: Store benchmark result
         uses: rhysd/github-action-benchmark@v1
         with:
