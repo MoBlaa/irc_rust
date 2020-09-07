@@ -1,4 +1,3 @@
-#![feature(test)]
 #![deny(clippy::all)]
 #![deny(clippy::cargo)]
 
@@ -72,9 +71,6 @@ mod errors;
 
 #[cfg(test)]
 mod test;
-
-#[cfg(test)]
-mod bench;
 
 pub use message::Message;
 pub use builder::Message as MessageBuilder;
