@@ -1,4 +1,4 @@
-name: Build
+name: Rust Nightly
 
 on: push
 
@@ -6,7 +6,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build_nightly:
+  check:
 
     runs-on: ubuntu-latest
 
@@ -23,9 +23,9 @@ jobs:
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: nightly
           override: true
-          components: rustfmt, clippy
       - name: Build
         run: cargo build --verbose
       - name: Clippy
