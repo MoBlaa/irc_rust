@@ -1,0 +1,63 @@
+name: Build
+
+on: push
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_nightly:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Loading Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-nightly
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          components: rustfmt, clippy
+      - name: Build
+        run: cargo build --verbose
+      - name: Clippy
+        run: cargo clippy --verbose
+      - name: Tests
+        run: cargo test --verbose
+      - name: Benchmarks
+        run: cargo +nightly bench | tee output.txt
+      - name: Store benchmark result
+        uses: rhysd/github-action-benchmark@v1
+        with:
+          tool: 'cargo'
+          output-file-path: output.txt
+  build_stable:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Loading Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-stable
+      - name: Install latest stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt
+      - name: Build
+        run: cargo build --verbose --package irc-rust
