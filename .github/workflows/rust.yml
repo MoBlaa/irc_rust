@@ -129,9 +129,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - stable
           - nightly
-          - 1.40.0
     steps:
       - uses: actions/checkout@v2
       - name: Loading Cache
