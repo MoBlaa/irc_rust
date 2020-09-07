@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::MessageBuildError;
+use std::collections::HashMap;
 
 /// A MessageBuilder for a simpler generation of a message instead of building an string first.
 #[derive(Debug, Clone, Eq, PartialEq, Default)]

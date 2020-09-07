@@ -3,9 +3,13 @@ use crate::InvalidIrcFormatError;
 
 #[test]
 fn test_parse() {
-    let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+    let message =
+        Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 
-    assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+    assert_eq!(
+        message.to_string(),
+        "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing"
+    );
 
     let tags = message.tags().unwrap().unwrap();
     let val = &tags["key1"];
@@ -184,14 +188,20 @@ fn test_message_builder() -> Result<(), InvalidIrcFormatError> {
         .prefix_user("user")
         .prefix_host("host")
         .command("CMD")
-        .param("param1").param("param2")
+        .param("param1")
+        .param("param2")
         .trailing("trailing")
         .build()
         .expect("failed to build message");
     let str = message.to_string();
-    assert!(str.as_str() == "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing" || str.as_str() == "@key2=value2;key1=value1 :name!user@host CMD param1 param2 :trailing");
+    assert!(
+        str.as_str() == "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing"
+            || str.as_str()
+                == "@key2=value2;key1=value1 :name!user@host CMD param1 param2 :trailing"
+    );
 
-    let message = message.to_builder()?
+    let message = message
+        .to_builder()?
         .tag("key1", "value3")
         .prefix_name("name1")
         .param("param2")

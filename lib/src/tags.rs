@@ -1,8 +1,8 @@
-use std::ops::Index;
+use crate::errors::InvalidIrcFormatError;
 use core::fmt;
 use std::collections::HashMap;
-use crate::errors::InvalidIrcFormatError;
 use std::convert::TryFrom;
+use std::ops::Index;
 
 /// Tag Map as described through IRCv3.
 ///
@@ -38,23 +38,22 @@ impl<'a> Tags<'a> {
     }
 
     /// Iterator over the tag entries.
-    pub fn iter(&self) -> impl Iterator<Item=(&'a str, &'a str)> {
-        self.raw.split(';')
-            .map(|kv| {
-                let mut split = kv.split('=');
-                (split.next().unwrap(), split.next().unwrap())
-            })
+    pub fn iter(&self) -> impl Iterator<Item = (&'a str, &'a str)> {
+        self.raw.split(';').map(|kv| {
+            let mut split = kv.split('=');
+            (split.next().unwrap(), split.next().unwrap())
+        })
     }
 
     // Search for the key and return start and end of the value
     fn find(&self, key: &'a str) -> Option<(usize, usize)> {
         let key_equals = format!("{}=", key);
-        self.raw.find(&key_equals)
-            .map(|start| {
-                start + key.len() + 1
-            })
+        self.raw
+            .find(&key_equals)
+            .map(|start| start + key.len() + 1)
             .and_then(|start| {
-                self.raw[start..].find(';')
+                self.raw[start..]
+                    .find(';')
                     .or_else(|| self.raw[start..].find(' '))
                     .or_else(|| Some(self.raw.len() - start))
                     .map(|end| (start, start + end))
@@ -62,11 +61,9 @@ impl<'a> Tags<'a> {
     }
 
     pub fn get(&self, key: &'a str) -> Option<&'a str> {
-        self.find(key)
-            .map(|(start, end)| &self.raw[start..end])
+        self.find(key).map(|(start, end)| &self.raw[start..end])
     }
 }
-
 
 impl<'a> TryFrom<&'a str> for Tags<'a> {
     type Error = InvalidIrcFormatError;
@@ -82,11 +79,11 @@ impl<'a> TryFrom<&'a str> for Tags<'a> {
             let mut split = key_val.split('=');
             let key = match split.next() {
                 Some(key) => key,
-                None => return Err(InvalidIrcFormatError::Tag(raw.to_string()))
+                None => return Err(InvalidIrcFormatError::Tag(raw.to_string())),
             };
             let value = match split.next() {
                 Some(value) => value,
-                None => return Err(InvalidIrcFormatError::Tag(raw.to_string()))
+                None => return Err(InvalidIrcFormatError::Tag(raw.to_string())),
             };
             if split.next().is_some() {
                 return Err(InvalidIrcFormatError::Tag(raw.to_string()));
@@ -94,10 +91,7 @@ impl<'a> TryFrom<&'a str> for Tags<'a> {
             tags.insert(key, value);
         }
         tags.shrink_to_fit();
-        Ok(Tags {
-            raw,
-            tags,
-        })
+        Ok(Tags { raw, tags })
     }
 }
 
@@ -124,8 +118,8 @@ impl<'a> AsRef<str> for Tags<'a> {
 #[cfg(test)]
 mod tests {
     use crate::tags::Tags;
-    use std::convert::TryFrom;
     use crate::InvalidIrcFormatError;
+    use std::convert::TryFrom;
 
     #[test]
     fn test_get_and_index() -> Result<(), InvalidIrcFormatError> {
