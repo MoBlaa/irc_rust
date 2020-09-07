@@ -17,7 +17,7 @@
 //!
 //! # Support
 //!
-//! Current support (as of version '0.2.*'):
+//! Current support (as of version '0.3.*'):
 //!
 //! - **Message**: Create read-only Message from `String` or `&str` and with a builder `Message::builder()`.
 //! - **Tags**: access through the indexing operator and iterating over all tags.
@@ -37,7 +37,7 @@
 //! assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 //! ```
 //!
-//! While reading from standard input the `Message::new` method has to be used.
+//! While reading from standard input the `Message::from` method has to be used.
 //!
 //! ```rust
 //! use irc_rust::Message;
