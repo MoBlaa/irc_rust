@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1599498006138,
+  "lastUpdate": 1599498140868,
   "repoUrl": "https://github.com/MoBlaa/irc_rust",
   "entries": {
     "Benchmark": [
@@ -157,6 +157,58 @@ window.BENCHMARK_DATA = {
             "name": "bench__bench_tag_index",
             "value": 140,
             "range": "± 40",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "moblaa@pm.me",
+            "name": "moblaa"
+          },
+          "committer": {
+            "email": "moblaa@pm.me",
+            "name": "moblaa"
+          },
+          "distinct": true,
+          "id": "44400675dc78a1bd750fd51cec1b5ff84e4a86c1",
+          "message": "Merge remote-tracking branch 'origin/master'\n\n# Conflicts:\n#\tCargo.toml\n#\tREADME.md\n#\tbench/Cargo.toml\n#\tbench/src/bench.rs\n#\tbench/src/lib.rs\n#\tlib/src/lib.rs",
+          "timestamp": "2020-09-07T19:00:54+02:00",
+          "tree_id": "f7801e91fc061b0675d01797d6ceefcc4a238d4a",
+          "url": "https://github.com/MoBlaa/irc_rust/commit/44400675dc78a1bd750fd51cec1b5ff84e4a86c1"
+        },
+        "date": 1599498140275,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench__bench_params_create",
+            "value": 237,
+            "range": "± 42",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_params_iter",
+            "value": 2023,
+            "range": "± 407",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_parse",
+            "value": 1067,
+            "range": "± 309",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_tag_create",
+            "value": 1446,
+            "range": "± 382",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_tag_index",
+            "value": 135,
+            "range": "± 50",
             "unit": "ns/iter"
           }
         ]
