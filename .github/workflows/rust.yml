@@ -175,34 +175,3 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           parallel-finished: true
-  bench:
-    # Benchmarks can only run on nightly yet
-    # Currently fails to extract benchmark information https://github.com/rhysd/github-action-benchmark/issues/39
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Loading Cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-nightly
-      - name: Install latest nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - name: Benchmarks
-        # Currently fails to extract benchmark information https://github.com/rhysd/github-action-benchmark/issues/39
-        # Thats why '::' is replaced with ' '
-        run: cargo +nightly bench | sed 's/::/__/' | tee output.txt
-      - name: Store benchmark result
-        uses: rhysd/github-action-benchmark@v1
-        with:
-          tool: 'cargo'
-          output-file-path: output.txt
-          github-token: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
-          auto-push: true
