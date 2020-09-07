@@ -177,6 +177,7 @@ jobs:
           parallel-finished: true
   bench:
     # Benchmarks can only run on nightly yet
+    # Currently fails to extract benchmark information https://github.com/rhysd/github-action-benchmark/issues/39
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -195,7 +196,9 @@ jobs:
           toolchain: nightly
           override: true
       - name: Benchmarks
-        run: cargo +nightly bench | tee output.txt
+        # Currently fails to extract benchmark information https://github.com/rhysd/github-action-benchmark/issues/39
+        # Thats why '::' is replaced with ' '
+        run: cargo +nightly bench | sed 's/::/ /' | tee output.txt
       - name: Store benchmark result
         uses: rhysd/github-action-benchmark@v1
         with:
