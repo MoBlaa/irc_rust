@@ -1,4 +1,4 @@
-# irc-rust [![https://docs.rs/irc-rust/badge.svg](https://docs.rs/irc-rust/badge.svg)](https://docs.rs/irc-rust) [![crates.io](https://img.shields.io/crates/v/irc-rust.svg)](https://crates.io/crates/irc-rust)
+# irc-rust [![https://docs.rs/irc-rust/badge.svg](https://docs.rs/irc-rust/badge.svg)](https://docs.rs/irc-rust) [![crates.io](https://img.shields.io/crates/v/irc-rust.svg)](https://crates.io/crates/irc-rust) [![Coverage Status](https://coveralls.io/repos/github/MoBlaa/irc_rust/badge.svg?branch=github-actions)](https://coveralls.io/github/MoBlaa/irc_rust?branch=github-actions)
 IRC Helper easing the access and creation of IRC Messages. Minimum supported rust version (MRSV) is **1.40.0**.
 
 Github-actions runs `build`, `check`, `fmt`, `clippy` and `test` against the latest stable, nightly and 1.40.0 rust toolchains.
