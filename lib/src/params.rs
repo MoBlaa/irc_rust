@@ -5,7 +5,7 @@ use core::fmt;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Params<'a> {
     raw: &'a str,
-    trailing_start: Option<usize>
+    trailing_start: Option<usize>,
 }
 
 impl<'a> Params<'a> {
@@ -13,15 +13,14 @@ impl<'a> Params<'a> {
     pub fn new() -> Params<'a> {
         Params {
             raw: "",
-            trailing_start: None
+            trailing_start: None,
         }
     }
 
     /// Returns the trailing parameter which is seperated from the
     /// other parameters with ' :'.
     pub fn trailing(&self) -> Option<&'a str> {
-        self.trailing_start
-            .map(|index| &self.raw[index + 2..])
+        self.trailing_start.map(|index| &self.raw[index + 2..])
     }
 
     /// Create an iterator over the parameter list excluding the trailing parameter.
@@ -30,7 +29,7 @@ impl<'a> Params<'a> {
             // Split into parameter list and trailing
             Some(index) => self.raw[..index].split_whitespace(),
             // Only split parameters
-            None => self.raw.split_whitespace()
+            None => self.raw.split_whitespace(),
         }
     }
 }
@@ -47,7 +46,7 @@ impl<'a> From<&'a str> for Params<'a> {
 
         Params {
             raw,
-            trailing_start
+            trailing_start,
         }
     }
 }
