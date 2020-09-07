@@ -1,6 +1,6 @@
 [package]
 name = "irc-rust"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["mo_blaa <mo.blaa@pm.me>"]
 edition = "2018"
 description = "IRC Helper easing the access and creation of IRC Messages"
@@ -11,6 +11,7 @@ license = "MIT"
 readme = "../README.md"
 keywords = ["irc", "api"]
 categories = ["parser-implementations", "encoding"]
+publish = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
