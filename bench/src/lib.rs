@@ -1,6 +1,6 @@
 #![feature(test)]
-#![deny(clippy::all)]
-#![deny(clippy::cargo)]
+#![allow(clippy::cargo)]
+#![allow(clippy::all)]
 
 #[cfg(test)]
 mod bench;

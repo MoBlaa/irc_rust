@@ -87,9 +87,9 @@ impl<'a> Message<'a> {
             str.push('@');
             for (key, val) in self.tags {
                 str.push_str(key);
-                str.push_str("=");
+                str.push('=');
                 str.push_str(val);
-                str.push_str(";")
+                str.push(';')
             }
             str.pop();
             str.push(' ');
