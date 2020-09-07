@@ -34,6 +34,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
+          args: --package irc-rust
   check:
     runs-on: ubuntu-latest
     strategy:
