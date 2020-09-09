@@ -181,18 +181,14 @@ fn test_prefix() {
 
 #[test]
 fn test_message_builder() -> Result<(), InvalidIrcFormatError> {
-    let message = Message::builder()
+    let message = Message::builder("CMD")
         .tag("key1", "value1")
         .tag("key2", "value2")
-        .prefix_name("name")
-        .prefix_user("user")
-        .prefix_host("host")
-        .command("CMD")
+        .prefix("name", Some("user"), Some("host"))
         .param("param1")
         .param("param2")
         .trailing("trailing")
-        .build()
-        .expect("failed to build message");
+        .build();
     let str = message.to_string();
     assert!(
         str.as_str() == "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing"
@@ -203,14 +199,13 @@ fn test_message_builder() -> Result<(), InvalidIrcFormatError> {
     let message = message
         .to_builder()?
         .tag("key1", "value3")
-        .prefix_name("name1")
+        .prefix("name1", Some("user"), Some("host"))
         .param("param2")
         .set_param(1, "param3")
         .trailing("other trailing!")
-        .build()
-        .expect("failed building message");
+        .build();
     let str = message.to_string();
-    assert!(str.as_str() == "@key1=value3;key2=value2 :name1!user@host CMD param1 param3 param2 :other trailing!" || str.as_str() == "@key2=value2;key1=value3 :name1!user@host CMD param1 param3 param2 :other trailing!");
+    assert!(str.as_str() == "@key1=value3;key2=value2 :name1!user@host CMD param1 param3 param2 :other trailing!" || str.as_str() == "@key2=value2;key1=value3 :name1!user@host CMD param1 param3 param2 :other trailing!", "Actual: {}", str.as_str());
 
     Ok(())
 }

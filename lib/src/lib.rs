@@ -73,7 +73,7 @@ mod tags;
 mod test;
 
 pub use builder::Message as MessageBuilder;
-pub use errors::{InvalidIrcFormatError, MessageBuildError};
+pub use errors::InvalidIrcFormatError;
 pub use message::Message;
 pub use params::Params;
 pub use prefix::Prefix;

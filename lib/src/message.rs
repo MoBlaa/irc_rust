@@ -33,16 +33,13 @@ use std::convert::TryFrom;
 /// use std::error::Error;
 ///
 /// fn main() -> Result<(), Box<dyn Error>> {
-///     let message = Message::builder()
+///     let message = Message::builder("CMD")
 ///         .tag("key1", "value1")
 ///         .tag("key2", "value2")
-///         .prefix_name("name")
-///         .prefix_user("user")
-///         .prefix_host("host")
-///         .command("CMD")
+///         .prefix("name", Some("user"), Some("host"))
 ///         .param("param1").param("param2")
 ///         .trailing("trailing")
-///         .build()?;
+///         .build();
 ///
 ///     let tags = message.tags().unwrap().unwrap();
 ///     println!("key1={}", &tags["key1"]); // Prints 'key1=value1'
@@ -63,7 +60,7 @@ use std::convert::TryFrom;
 ///     .param("param2")
 ///     .param("param4")
 ///     .set_param(1, "param3")
-///     .build()?;
+///     .build();
 ///
 ///     assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
 ///     Ok(())
@@ -77,27 +74,21 @@ pub struct Message {
 
 impl Message {
     /// Creates a message builder as alternative to building an irc string before creating the message.
-    pub fn builder<'a>() -> MessageBuilder<'a> {
-        MessageBuilder::new()
+    pub fn builder(command: &str) -> MessageBuilder {
+        MessageBuilder::new(command)
     }
 
     /// Creates a builder from this message. Only initializes fields already present in the message.
     /// By using this method a whole new Message will be created.
     pub fn to_builder(&self) -> Result<MessageBuilder<'_>, InvalidIrcFormatError> {
-        let mut builder = MessageBuilder::new();
+        let mut builder = MessageBuilder::new(self.command());
         if let Some(tags) = self.tags()? {
             for (key, value) in tags.iter() {
                 builder = builder.tag(key, value)
             }
         }
         if let Some(prefix) = self.prefix()? {
-            builder = builder.prefix_name(prefix.name());
-            if let Some(prefix_user) = prefix.user() {
-                builder = builder.prefix_user(prefix_user);
-            }
-            if let Some(prefix_host) = prefix.host() {
-                builder = builder.prefix_host(prefix_host);
-            }
+            builder = builder.prefix(prefix.name(), prefix.user(), prefix.host());
         }
         builder = builder.command(self.command());
         if let Some(params) = self.params() {
