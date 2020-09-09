@@ -1,6 +1,6 @@
 [package]
 name = "irc-rust"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["mo_blaa <mo.blaa@pm.me>"]
 edition = "2018"
 description = "IRC Helper easing the access and creation of IRC Messages"
