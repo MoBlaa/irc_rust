@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1603639186079,
+  "lastUpdate": 1616783119427,
   "repoUrl": "https://github.com/MoBlaa/irc_rust",
   "entries": {
     "Benchmark": [
@@ -573,6 +573,60 @@ window.BENCHMARK_DATA = {
             "name": "bench__bench_tag_index",
             "value": 124,
             "range": "± 18",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mo.blaa@pm.me",
+            "name": "MoBlaa",
+            "username": "MoBlaa"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "40882147b62e31f62be401f14431e7b174f50e40",
+          "message": "Fixed some lifetime issues (#2)\n\n* fixed some lifetime issues",
+          "timestamp": "2021-03-26T19:23:24+01:00",
+          "tree_id": "0019929a3a31f5078a12d586afeae1b7b7ec9779",
+          "url": "https://github.com/MoBlaa/irc_rust/commit/40882147b62e31f62be401f14431e7b174f50e40"
+        },
+        "date": 1616783118541,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench__bench_params_create",
+            "value": 17,
+            "range": "± 2",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_params_iter",
+            "value": 2254,
+            "range": "± 42",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_parse",
+            "value": 1174,
+            "range": "± 15",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_tag_create",
+            "value": 1944,
+            "range": "± 37",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_tag_index",
+            "value": 155,
+            "range": "± 3",
             "unit": "ns/iter"
           }
         ]
