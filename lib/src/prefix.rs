@@ -1,5 +1,5 @@
 use std::fmt;
-use std::ops::{Range, RangeTo, RangeFrom};
+use std::ops::{Range, RangeFrom, RangeTo};
 
 /// Message prefix containing a name (servername or nickname) and optional
 /// user and host. If the user and host are set the name is semantically
@@ -32,7 +32,7 @@ impl<'a> Prefix<'a> {
     }
 
     fn host_bounds(&self) -> Option<RangeFrom<usize>> {
-        self.raw.find('@').map(|index| index+1..)
+        self.raw.find('@').map(|index| index + 1..)
     }
 
     // Returns the host if present.
@@ -43,7 +43,7 @@ impl<'a> Prefix<'a> {
     fn user_bounds(&self) -> Option<Range<usize>> {
         self.raw.find('!').map(|start| {
             let end = self.raw.find('@').unwrap_or_else(|| self.raw.len());
-            start+1..end
+            start + 1..end
         })
     }
 

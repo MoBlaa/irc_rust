@@ -10,9 +10,7 @@ pub struct Params<'a> {
 impl<'a> Params<'a> {
     /// Create a new Parameter list from the given string. Expects the string to be a valid parameter list.
     pub fn new() -> Params<'a> {
-        Params {
-            raw: ""
-        }
+        Params { raw: "" }
     }
 
     fn trailing_start(&self) -> Option<usize> {
@@ -36,10 +34,10 @@ impl<'a> Params<'a> {
         params.split_whitespace()
     }
 
-    pub fn into_parts(self) -> (impl Iterator<Item=&'a str>, Option<&'a str>) {
+    pub fn into_parts(self) -> (impl Iterator<Item = &'a str>, Option<&'a str>) {
         let (params, trailing) = match self.trailing_start() {
-            Some(index) => (&self.raw[..index], Some(&self.raw[index+2..])),
-            None => (self.raw, None)
+            Some(index) => (&self.raw[..index], Some(&self.raw[index + 2..])),
+            None => (self.raw, None),
         };
         (params.split_whitespace(), trailing)
     }
@@ -53,9 +51,7 @@ impl<'a> fmt::Display for Params<'a> {
 
 impl<'a> From<&'a str> for Params<'a> {
     fn from(raw: &'a str) -> Self {
-        Params {
-            raw,
-        }
+        Params { raw }
     }
 }
 
