@@ -6,8 +6,6 @@ use std::ops::Index;
 
 /// Tag Map as described through IRCv3.
 ///
-/// test bench::bench_tag_create    ... bench:           1 ns/iter (+/- 0)
-// test bench::bench_tag_index     ... bench:      14,707 ns/iter (+/- 2,811)
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Tags<'a> {
@@ -46,7 +44,7 @@ impl<'a> Tags<'a> {
     }
 
     // Search for the key and return start and end of the value
-    fn find(&self, key: &'a str) -> Option<(usize, usize)> {
+    fn find(&self, key: &str) -> Option<(usize, usize)> {
         let key_equals = format!("{}=", key);
         self.raw
             .find(&key_equals)
@@ -60,7 +58,7 @@ impl<'a> Tags<'a> {
             })
     }
 
-    pub fn get(&self, key: &'a str) -> Option<&'a str> {
+    pub fn get(&self, key: &str) -> Option<&str> {
         self.find(key).map(|(start, end)| &self.raw[start..end])
     }
 }

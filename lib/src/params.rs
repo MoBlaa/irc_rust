@@ -5,32 +5,43 @@ use core::fmt;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Params<'a> {
     raw: &'a str,
-    trailing_start: Option<usize>,
 }
 
 impl<'a> Params<'a> {
     /// Create a new Parameter list from the given string. Expects the string to be a valid parameter list.
     pub fn new() -> Params<'a> {
         Params {
-            raw: "",
-            trailing_start: None,
+            raw: ""
         }
+    }
+
+    fn trailing_start(&self) -> Option<usize> {
+        self.raw.find(" :")
     }
 
     /// Returns the trailing parameter which is seperated from the
     /// other parameters with ' :'.
-    pub fn trailing(&self) -> Option<&'a str> {
-        self.trailing_start.map(|index| &self.raw[index + 2..])
+    pub fn trailing(&self) -> Option<&str> {
+        self.trailing_start().map(|index| &self.raw[index + 2..])
     }
 
     /// Create an iterator over the parameter list excluding the trailing parameter.
-    pub fn iter(&self) -> impl Iterator<Item = &'a str> {
-        match self.raw.find(" :") {
+    pub fn iter(&self) -> impl Iterator<Item = &str> {
+        let params = match self.trailing_start() {
             // Split into parameter list and trailing
-            Some(index) => self.raw[..index].split_whitespace(),
+            Some(index) => &self.raw[..index],
             // Only split parameters
-            None => self.raw.split_whitespace(),
-        }
+            None => self.raw,
+        };
+        params.split_whitespace()
+    }
+
+    pub fn into_parts(self) -> (impl Iterator<Item=&'a str>, Option<&'a str>) {
+        let (params, trailing) = match self.trailing_start() {
+            Some(index) => (&self.raw[..index], Some(&self.raw[index+2..])),
+            None => (self.raw, None)
+        };
+        (params.split_whitespace(), trailing)
     }
 }
 
@@ -42,11 +53,8 @@ impl<'a> fmt::Display for Params<'a> {
 
 impl<'a> From<&'a str> for Params<'a> {
     fn from(raw: &'a str) -> Self {
-        let trailing_start = raw.find(" :");
-
         Params {
             raw,
-            trailing_start,
         }
     }
 }

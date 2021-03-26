@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::{Range, RangeTo, RangeFrom};
 
 /// Message prefix containing a name (servername or nickname) and optional
 /// user and host. If the user and host are set the name is semantically
@@ -15,28 +16,52 @@ impl<'a> Prefix<'a> {
         Prefix { raw: "" }
     }
 
-    // Returns the (server- or nick-) name.
-    pub fn name(&self) -> &'a str {
+    fn name_bounds(&self) -> RangeTo<usize> {
         let end = self
             .raw
             .find('!')
             .or_else(|| self.raw.find('@'))
             .or_else(|| self.raw.find(' '))
             .unwrap_or_else(|| self.raw.len());
-        &self.raw[..end]
+        ..end
+    }
+
+    // Returns the (server- or nick-) name.
+    pub fn name(&self) -> &str {
+        &self.raw[self.name_bounds()]
+    }
+
+    fn host_bounds(&self) -> Option<RangeFrom<usize>> {
+        self.raw.find('@').map(|index| index+1..)
     }
 
     // Returns the host if present.
-    pub fn host(&self) -> Option<&'a str> {
-        self.raw.find('@').map(|index| &self.raw[index + 1..])
+    pub fn host(&self) -> Option<&str> {
+        self.host_bounds().map(|range| &self.raw[range])
     }
 
-    // Returns the host if present.
-    pub fn user(&self) -> Option<&'a str> {
+    fn user_bounds(&self) -> Option<Range<usize>> {
         self.raw.find('!').map(|start| {
             let end = self.raw.find('@').unwrap_or_else(|| self.raw.len());
-            &self.raw[start + 1..end]
+            start+1..end
         })
+    }
+
+    // Returns the host if present.
+    pub fn user(&self) -> Option<&str> {
+        self.user_bounds().map(|range| &self.raw[range])
+    }
+
+    pub fn into_parts(self) -> (&'a str, Option<&'a str>, Option<&'a str>) {
+        let name_bounds = self.name_bounds();
+        let user_bounds = self.user_bounds();
+        let host_bounds = self.host_bounds();
+
+        (
+            &self.raw[name_bounds],
+            user_bounds.map(|range| &self.raw[range]),
+            host_bounds.map(|range| &self.raw[range]),
+        )
     }
 }
 
