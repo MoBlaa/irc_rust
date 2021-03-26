@@ -88,14 +88,16 @@ impl Message {
             }
         }
         if let Some(prefix) = self.prefix()? {
-            builder = builder.prefix(prefix.name(), prefix.user(), prefix.host());
+            let (name, user, host) = prefix.into_parts();
+            builder = builder.prefix(name, user, host);
         }
         builder = builder.command(self.command());
         if let Some(params) = self.params() {
-            if let Some(trailing) = params.trailing() {
+            let (params, trailing) = params.into_parts();
+            if let Some(trailing) = trailing {
                 builder = builder.trailing(trailing);
             }
-            for param in params.iter() {
+            for param in params {
                 builder = builder.param(param);
             }
         }
