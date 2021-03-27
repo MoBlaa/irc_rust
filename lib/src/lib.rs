@@ -66,9 +66,9 @@ mod builder;
 mod errors;
 mod message;
 mod params;
+mod parsed;
 mod prefix;
 mod tags;
-mod parsed;
 
 #[cfg(test)]
 mod test;
@@ -77,6 +77,6 @@ pub use builder::Message as MessageBuilder;
 pub use errors::InvalidIrcFormatError;
 pub use message::Message;
 pub use params::Params;
+pub use parsed::Parsed;
 pub use prefix::Prefix;
 pub use tags::Tags;
-pub use parsed::Parsed;

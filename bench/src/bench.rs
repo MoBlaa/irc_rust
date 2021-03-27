@@ -40,7 +40,10 @@ fn bench_full(b: &mut Bencher) {
 
         let first = tags.next();
         let second = tags.next();
-        assert!((next_is_key1(first) && next_is_key2(second)) || (next_is_key2(first) && next_is_key1(second)));
+        assert!(
+            (next_is_key1(first) && next_is_key2(second))
+                || (next_is_key2(first) && next_is_key1(second))
+        );
         // 319 ns/iter
 
         let prefix = message.prefix();

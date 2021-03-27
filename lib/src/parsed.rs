@@ -1,6 +1,6 @@
+use crate::{InvalidIrcFormatError, Message};
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use crate::{Message, InvalidIrcFormatError};
 
 pub type Prefix<'a> = (&'a str, Option<&'a str>, Option<&'a str>);
 
@@ -31,7 +31,7 @@ impl<'a> Parsed<'a> {
         self.params.get(index)
     }
 
-    pub fn params(&self) -> impl Iterator<Item=&&'a str> {
+    pub fn params(&self) -> impl Iterator<Item = &&'a str> {
         self.params.iter()
     }
 
@@ -39,7 +39,7 @@ impl<'a> Parsed<'a> {
         self.tags.get(key)
     }
 
-    pub fn tags(&self) -> impl Iterator<Item=(&&'a str, &&'a str)> {
+    pub fn tags(&self) -> impl Iterator<Item = (&&'a str, &&'a str)> {
         self.tags.iter()
     }
 }
@@ -48,14 +48,15 @@ impl<'a> TryFrom<&'a Message> for Parsed<'a> {
     type Error = InvalidIrcFormatError;
 
     fn try_from(value: &'a Message) -> Result<Self, Self::Error> {
-        let tags = value.tags()?
+        let tags = value
+            .tags()?
             .map(|tags| tags.iter().collect::<HashMap<_, _>>())
             .unwrap_or_default();
 
-        let prefix = value.prefix()?
-            .map(|prefix| prefix.into_parts());
+        let prefix = value.prefix()?.map(|prefix| prefix.into_parts());
 
-        let (params, trailing) = value.params()
+        let (params, trailing) = value
+            .params()
             .map(|param| param.into_parts())
             .map(|(params, trailing)| (params.collect::<Vec<_>>(), trailing))
             .unwrap_or_default();

@@ -1,11 +1,11 @@
 extern crate rand;
 extern crate test;
 
-use test::Bencher;
-use irc_rust::{Message, InvalidIrcFormatError, Parsed};
 use self::rand::Rng;
-use std::convert::TryFrom;
+use irc_rust::{InvalidIrcFormatError, Message, Parsed};
 use std::collections::HashMap;
+use std::convert::TryFrom;
+use test::Bencher;
 
 #[bench]
 fn bench_full_parsed(b: &mut Bencher) {
@@ -23,7 +23,6 @@ fn bench_full_parsed(b: &mut Bencher) {
         assert!(val.is_some());
         assert_eq!(val.unwrap(), &"value2");
 
-
         let mut tags = parsed.tags();
         let next_is_key1 = |next: Option<(&&str, &&str)>| {
             let (key, val) = next.unwrap();
@@ -36,7 +35,10 @@ fn bench_full_parsed(b: &mut Bencher) {
 
         let first = tags.next();
         let second = tags.next();
-        assert!((next_is_key1(first) && next_is_key2(second)) || (next_is_key2(first) && next_is_key1(second)));
+        assert!(
+            (next_is_key1(first) && next_is_key2(second))
+                || (next_is_key2(first) && next_is_key1(second))
+        );
 
         let prefix = parsed.prefix();
         assert!(prefix.is_some());
