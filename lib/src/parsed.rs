@@ -6,6 +6,7 @@ pub type Prefix<'a> = (&'a str, Option<&'a str>, Option<&'a str>);
 
 /// Fully parsed Message instead of parsing on demand. Instead of
 /// zero-allocation this struct implements zero-copy parsing.
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Parsed<'a> {
     tags: HashMap<&'a str, &'a str>,
     prefix: Option<Prefix<'a>>,
