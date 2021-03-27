@@ -10,6 +10,7 @@ use test::Bencher;
 #[bench]
 fn bench_full_parsed(b: &mut Bencher) {
     // Excluding the allocation of the string
+    // TODO: Generate String more randomly but with realistic values
     let str = String::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
     let raw = str.as_str();
     b.iter(move || {
