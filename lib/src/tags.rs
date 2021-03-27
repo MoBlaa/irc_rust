@@ -35,9 +35,13 @@ impl<'a> Tags<'a> {
 
     /// Iterator over the tag entries.
     pub fn iter(&self) -> impl Iterator<Item = (&'a str, &'a str)> {
-        self.raw.split(';').map(|kv| {
+        self.raw.split(';').flat_map(|kv| {
+            if kv.is_empty() {
+                return None;
+            }
+
             let mut split = kv.split('=');
-            (split.next().unwrap(), split.next().unwrap())
+            Some((split.next().unwrap(), split.next().unwrap_or("")))
         })
     }
 
@@ -91,6 +95,7 @@ impl<'a> AsRef<str> for Tags<'a> {
 mod tests {
     use crate::tags::Tags;
     use crate::InvalidIrcFormatError;
+    use std::collections::HashMap;
     use std::convert::TryFrom;
 
     #[test]
@@ -102,6 +107,32 @@ mod tests {
         assert_eq!(get, Some("goes"));
         let get = tags.get("world");
         assert_eq!(get, None);
+        Ok(())
+    }
+
+    #[test]
+    fn test_iter() -> Result<(), InvalidIrcFormatError> {
+        let mut map = HashMap::new();
+        map.insert("hello", "world");
+        map.insert("whats", "goes");
+        map.insert("hello2", "world2");
+
+        let tags = Tags::try_from("hello=world;whats=goes;hello2=world2;;")?;
+        for (key, value) in tags.iter() {
+            assert!(map.contains_key(&key));
+            assert_eq!(map.get(&key).unwrap(), &value);
+            map.remove(&key);
+        }
+
+        assert!(
+            map.is_empty(),
+            "Entries not contained in parsed tags: {}",
+            map.iter()
+                .map(|(key, value)| format!("Key: {}, Value: {}", key, value))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+
         Ok(())
     }
 }

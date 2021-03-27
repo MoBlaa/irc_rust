@@ -5,6 +5,7 @@ use rand::Rng;
 use test::Bencher;
 
 use irc_rust::{InvalidIrcFormatError, Message, Params, Tags};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 #[bench]
@@ -79,7 +80,7 @@ fn bench_tag_create(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_tag_index(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
+fn bench_tag_get(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
     let mut str = String::from("");
     for i in 0..1000 {
         str = format!("{}key{}=value{}", str, i, i);
@@ -95,6 +96,38 @@ fn bench_tag_index(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
         let skey = format!("key{}", ikey);
         let val = tags.get(&skey);
         assert_eq!(val.unwrap(), format!("value{}", ikey));
+    });
+
+    Ok(())
+}
+
+#[bench]
+fn bench_tags_iter_100(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
+    let mut str = String::from("");
+    let mut key_values = HashMap::new();
+    for i in 0..100 {
+        let key = format!("key{}", i);
+        let value = format!("value{}", i);
+        key_values.insert(key.clone(), value.clone());
+
+        str = format!("{}{}={}", str, key, value);
+        if i < 100 - 1 {
+            str.push(';');
+        }
+    }
+    let tags = Tags::try_from(str.as_str())?;
+
+    b.iter(|| {
+        for (key, value) in tags.iter() {
+            let stored = key_values.get(key);
+            assert!(
+                stored.is_some(),
+                "No value for key '{}' found in '{}'",
+                key,
+                tags
+            );
+            assert_eq!(stored.unwrap(), value);
+        }
     });
 
     Ok(())
