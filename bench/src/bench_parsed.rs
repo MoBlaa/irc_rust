@@ -71,9 +71,9 @@ fn bench_tag_get(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
     }
     str.push_str(" CMD");
     let message = Message::from(str);
+    let parsed = Parsed::try_from(&message)?;
 
     b.iter(|| {
-        let parsed = Parsed::try_from(&message).unwrap();
         let mut rng = rand::thread_rng();
         let ikey = rng.gen_range(0, 1000);
         let skey = format!("key{}", ikey);
@@ -101,9 +101,9 @@ fn bench_tags_iter_100(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
     }
     str.push_str(" CMD");
     let message = Message::from(str);
+    let parsed = Parsed::try_from(&message)?;
 
     b.iter(|| {
-        let parsed = Parsed::try_from(&message).unwrap();
         for (key, value) in parsed.tags() {
             let stored = key_values.get(*key);
             assert!(
@@ -126,9 +126,9 @@ fn bench_params_iter(b: &mut Bencher) {
         str.push_str(" param");
     }
     let message = Message::from(str);
+    let parsed = message.parsed().unwrap();
 
     b.iter(|| {
-        let parsed = Parsed::try_from(&message).unwrap();
         for param in parsed.params() {
             assert_eq!(param, &"param")
         }
