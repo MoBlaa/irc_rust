@@ -68,6 +68,7 @@ mod message;
 mod params;
 mod prefix;
 mod tags;
+mod parsed;
 
 #[cfg(test)]
 mod test;
@@ -78,3 +79,4 @@ pub use message::Message;
 pub use params::Params;
 pub use prefix::Prefix;
 pub use tags::Tags;
+pub use parsed::Parsed;

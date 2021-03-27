@@ -7,6 +7,7 @@ use crate::params::Params;
 use crate::prefix::Prefix;
 use crate::tags::Tags;
 use std::convert::TryFrom;
+use crate::parsed::Parsed;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 ///
@@ -73,6 +74,11 @@ pub struct Message {
 }
 
 impl Message {
+    /// Returns a fully parsed but zero-copy struct referencing the struct.
+    pub fn parsed(&self) -> Result<Parsed, InvalidIrcFormatError> {
+        Parsed::try_from(self)
+    }
+
     /// Creates a message builder as alternative to building an irc string before creating the message.
     pub fn builder(command: &str) -> MessageBuilder {
         MessageBuilder::new(command)

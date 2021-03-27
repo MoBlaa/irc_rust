@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 
 #[bench]
-fn bench_parse(b: &mut Bencher) {
+fn bench_full(b: &mut Bencher) {
     // Excluding the allocation of the string
     let str = String::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
     let raw = str.as_str();
@@ -29,12 +29,18 @@ fn bench_parse(b: &mut Bencher) {
         // 189 ns/iter
 
         let mut tags = tags.iter();
-        let (key, val) = tags.next().unwrap();
-        assert_eq!(key, "key1");
-        assert_eq!(val, "value1");
-        let (key, val) = tags.next().unwrap();
-        assert_eq!(key, "key2");
-        assert_eq!(val, "value2");
+        let next_is_key1 = |next: Option<(&str, &str)>| {
+            let (key, val) = next.unwrap();
+            key == "key1" && val == "value1"
+        };
+        let next_is_key2 = |next: Option<(&str, &str)>| {
+            let (key, val) = next.unwrap();
+            key == "key2" && val == "value2"
+        };
+
+        let first = tags.next();
+        let second = tags.next();
+        assert!((next_is_key1(first) && next_is_key2(second)) || (next_is_key2(first) && next_is_key1(second)));
         // 319 ns/iter
 
         let prefix = message.prefix();
