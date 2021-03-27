@@ -42,7 +42,7 @@ use std::convert::TryFrom;
 ///         .build();
 ///
 ///     let tags = message.tags().unwrap().unwrap();
-///     println!("key1={}", &tags["key1"]); // Prints 'key1=value1'
+///     println!("key1={}", tags.get("key1").unwrap()); // Prints 'key1=value1'
 ///     Ok(())
 /// }
 /// ```

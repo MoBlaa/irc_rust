@@ -12,10 +12,10 @@ fn test_parse() {
     );
 
     let tags = message.tags().unwrap().unwrap();
-    let val = &tags["key1"];
-    assert_eq!(val, "value1");
-    let val = &tags["key2"];
-    assert_eq!(val, "value2");
+    let val = tags.get("key1");
+    assert_eq!(val, Some("value1"));
+    let val = tags.get("key2");
+    assert_eq!(val, Some("value2"));
 
     let mut tags = message.tags().unwrap().unwrap().iter();
     let (key, val) = tags.next().unwrap();
@@ -45,10 +45,10 @@ fn test_tags() {
     let message = Message::from("@tag1=value1;tag2=value2 CMD");
 
     let tags = message.tags().unwrap().unwrap();
-    let val = &tags["tag1"];
-    assert_eq!(val, "value1");
-    let val = &tags["tag2"];
-    assert_eq!(val, "value2");
+    let val = tags.get("tag1");
+    assert_eq!(val, Some("value1"));
+    let val = tags.get("tag2");
+    assert_eq!(val, Some("value2"));
 
     let mut tags = tags.iter();
     let (key, val) = tags.next().unwrap();

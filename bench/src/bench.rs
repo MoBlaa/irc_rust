@@ -21,10 +21,10 @@ fn bench_parse(b: &mut Bencher) {
         assert!(tags.is_some());
         let tags = tags.unwrap();
 
-        let val = &tags["key1"];
-        assert_eq!(val, "value1");
-        let val = &tags["key2"];
-        assert_eq!(val, "value2");
+        let val = tags.get("key1");
+        assert_eq!(val, Some("value1"));
+        let val = tags.get("key2");
+        assert_eq!(val, Some("value2"));
         // 189 ns/iter
 
         let mut tags = tags.iter();
@@ -93,8 +93,8 @@ fn bench_tag_index(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
         let mut rng = rand::thread_rng();
         let ikey = rng.gen_range(0, 1000);
         let skey = format!("key{}", ikey);
-        let val = &tags[&skey];
-        assert_eq!(val, format!("value{}", ikey));
+        let val = tags.get(&skey);
+        assert_eq!(val.unwrap(), format!("value{}", ikey));
     });
 
     Ok(())
