@@ -9,9 +9,8 @@ use std::ops::Deref;
 /// parts of the message. Implements the state pattern for a clear query structure.
 ///
 /// TODO:
-///     - Add State to include Command
 ///     - Parse raw String instead of Message (increase performance as currently multiple 'find' invocations happen)
-///     - Tags, Params and Prefix should return temporary references to parts of the string with lifetime 'a.
+///     - Tags, Params and Prefix should return temporary references to parts of the string with lifetime 'a. (&&'a str). Currently implicit Copies happen
 ///
 /// # Note on Parameters
 ///
