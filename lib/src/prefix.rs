@@ -1,6 +1,15 @@
 use std::fmt;
 use std::ops::{Range, RangeFrom, RangeTo};
 
+pub trait Prefixed<'a>: Sized {
+    fn name(&self) -> &'a str;
+    fn user(&self) -> Option<&'a str>;
+    fn host(&self) -> Option<&'a str>;
+    fn as_parts(&self) -> (&'a str, Option<&'a str>, Option<&'a str>) {
+        (self.name(), self.user(), self.host())
+    }
+}
+
 /// Message prefix containing a name (servername or nickname) and optional
 /// user and host. If the user and host are set the name is semantically
 /// seen as the nickname.
@@ -26,18 +35,8 @@ impl<'a> Prefix<'a> {
         ..end
     }
 
-    // Returns the (server- or nick-) name.
-    pub fn name(&self) -> &'a str {
-        &self.raw[self.name_bounds()]
-    }
-
     fn host_bounds(&self) -> Option<RangeFrom<usize>> {
         self.raw.find('@').map(|index| index + 1..)
-    }
-
-    // Returns the host if present.
-    pub fn host(&self) -> Option<&'a str> {
-        self.host_bounds().map(|range| &self.raw[range])
     }
 
     fn user_bounds(&self) -> Option<Range<usize>> {
@@ -45,11 +44,6 @@ impl<'a> Prefix<'a> {
             let end = self.raw.find('@').unwrap_or_else(|| self.raw.len());
             start + 1..end
         })
-    }
-
-    // Returns the host if present.
-    pub fn user(&self) -> Option<&'a str> {
-        self.user_bounds().map(|range| &self.raw[range])
     }
 
     pub fn into_parts(self) -> (&'a str, Option<&'a str>, Option<&'a str>) {
@@ -62,6 +56,23 @@ impl<'a> Prefix<'a> {
             user_bounds.map(|range| &self.raw[range]),
             host_bounds.map(|range| &self.raw[range]),
         )
+    }
+}
+
+impl<'a> Prefixed<'a> for Prefix<'a> {
+    // Returns the (server- or nick-) name.
+    fn name(&self) -> &'a str {
+        &self.raw[self.name_bounds()]
+    }
+
+    // Returns the host if present.
+    fn user(&self) -> Option<&'a str> {
+        self.user_bounds().map(|range| &self.raw[range])
+    }
+
+    // Returns the host if present.
+    fn host(&self) -> Option<&'a str> {
+        self.host_bounds().map(|range| &self.raw[range])
     }
 }
 

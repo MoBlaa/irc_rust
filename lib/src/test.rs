@@ -1,4 +1,5 @@
 use crate::message::Message;
+use crate::prefix::Prefixed;
 use crate::InvalidIrcFormatError;
 
 #[test]

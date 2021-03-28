@@ -1,7 +1,9 @@
+use crate::parsed::ParsedPrefix;
+use crate::prefix::Prefixed;
+use crate::tags::Taggable;
 use crate::{InvalidIrcFormatError, Message, Parsed};
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
-use crate::tags::Taggable;
 
 /// Implements Zero-Copy __partial__ parsing by only parsing and extracting the desired
 /// parts of the message. Implements the state pattern for a clear query structure.
@@ -29,11 +31,15 @@ impl<'a> Taggable<'a> for TagsState<'a> {
     }
 }
 
-type Prefix<'a> = (&'a str, Option<&'a str>, Option<&'a str>);
-
 pub struct PrefixState<'a> {
     tags: HashMap<&'a str, &'a str>,
-    prefix: Option<Prefix<'a>>,
+    prefix: Option<ParsedPrefix<'a>>,
+}
+
+impl<'a> PrefixState<'a> {
+    pub fn prefix(&self) -> Option<&ParsedPrefix<'a>> {
+        self.prefix.as_ref()
+    }
 }
 
 impl<'a> State for PrefixState<'a> {}
@@ -45,7 +51,10 @@ impl<'a, T: State> Query<'a, T> {
         self.message.command()
     }
 
-    fn parse_tags(&self, mut searched: HashSet<&'a str>) -> Result<HashMap<&'a str, &'a str>, InvalidIrcFormatError> {
+    fn parse_tags(
+        &self,
+        mut searched: HashSet<&'a str>,
+    ) -> Result<HashMap<&'a str, &'a str>, InvalidIrcFormatError> {
         let parsed = self
             .message
             .tags()?
@@ -67,10 +76,14 @@ impl<'a, T: State> Query<'a, T> {
         Ok(parsed)
     }
 
-    fn parse_prefix(&self, user: bool, host: bool) -> Result<Option<Prefix<'a>>, InvalidIrcFormatError> {
+    fn parse_prefix(
+        &self,
+        user: bool,
+        host: bool,
+    ) -> Result<Option<ParsedPrefix<'a>>, InvalidIrcFormatError> {
         let prefix = match self.message.prefix()? {
             None => None,
-            Some(prefix) => Some((
+            Some(prefix) => Some(ParsedPrefix(
                 prefix.name(),
                 if user { prefix.user() } else { None },
                 if host { prefix.host() } else { None },
@@ -79,7 +92,11 @@ impl<'a, T: State> Query<'a, T> {
         Ok(prefix)
     }
 
-    fn parse_params(&self, mut param_indexes: Vec<usize>, trailing: bool) -> Result<(Vec<&'a str>, Option<&'a str>), InvalidIrcFormatError> {
+    fn parse_params(
+        &self,
+        mut param_indexes: Vec<usize>,
+        trailing: bool,
+    ) -> Result<(Vec<&'a str>, Option<&'a str>), InvalidIrcFormatError> {
         param_indexes.dedup();
         // Sort in revere order to be able to pop
         param_indexes.sort_by(|a, b| Ord::cmp(b, a));
@@ -98,7 +115,10 @@ impl<'a, T: State> Query<'a, T> {
                     position = param_index;
                 }
 
-                (filtered_params, if trailing { trailing_parsed } else { None })
+                (
+                    filtered_params,
+                    if trailing { trailing_parsed } else { None },
+                )
             }
         };
         Ok(result)
@@ -113,11 +133,29 @@ impl<'a> Query<'a, Init> {
         }
     }
 
-    pub fn tags<'b, I: IntoIterator<Item=&'a str>>(self, iter: I) -> Result<Query<'a, TagsState<'a>>, InvalidIrcFormatError> {
+    pub fn tags<'b, I: IntoIterator<Item = &'a str>>(
+        self,
+        iter: I,
+    ) -> Result<Query<'a, TagsState<'a>>, InvalidIrcFormatError> {
         Ok(Query {
             message: self.message,
             state: TagsState {
                 tags: self.parse_tags(iter.into_iter().collect::<HashSet<_>>())?,
+            },
+        })
+    }
+
+    pub fn prefix(
+        self,
+        user: bool,
+        host: bool,
+    ) -> Result<Query<'a, PrefixState<'a>>, InvalidIrcFormatError> {
+        let prefix = self.parse_prefix(user, host)?;
+        Ok(Query {
+            message: self.message,
+            state: PrefixState {
+                tags: HashMap::with_capacity(0),
+                prefix,
             },
         })
     }
@@ -141,12 +179,22 @@ impl<'a> Query<'a, TagsState<'a>> {
 }
 
 impl<'a> Query<'a, PrefixState<'a>> {
-    pub fn params(self, indexes: Vec<usize>, trailing: bool) -> Result<Query<'a, Parsed<'a>>, InvalidIrcFormatError> {
+    pub fn params(
+        self,
+        indexes: Vec<usize>,
+        trailing: bool,
+    ) -> Result<Query<'a, Parsed<'a>>, InvalidIrcFormatError> {
         let (params, trailing) = self.parse_params(indexes, trailing)?;
 
         Ok(Query {
             message: self.message,
-            state: Parsed::new(self.state.tags, self.state.prefix, self.message.command(), params, trailing)
+            state: Parsed::new(
+                self.state.tags,
+                self.state.prefix,
+                self.message.command(),
+                params,
+                trailing,
+            ),
         })
     }
 }
@@ -161,8 +209,9 @@ impl<'a, T: State> Deref for Query<'a, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Message;
+    use crate::prefix::Prefixed;
     use crate::tags::Taggable;
+    use crate::Message;
     use std::error::Error;
 
     #[test]
@@ -189,6 +238,52 @@ mod tests {
         assert_eq!(Some("value"), tags.tag("test"));
         assert_eq!(Some("value1"), tags.tag("test1"));
         assert_eq!(None, tags.tag("test2"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_prefix() -> Result<(), Box<dyn Error>> {
+        let message = Message::builder("CMD").build();
+        assert_eq!("CMD", message.command());
+        let prefix = message.query().prefix(false, false)?;
+        assert_eq!(None, prefix.prefix());
+
+        let message = Message::builder("CMD")
+            .prefix("name", Some("user"), Some("host"))
+            .build();
+        assert_eq!("CMD", message.command());
+        let prefix = message.query().prefix(false, false)?;
+        assert_eq!(Some("name"), prefix.prefix().map(|prefix| prefix.name()));
+        assert_eq!(None, prefix.prefix().and_then(|prefix| prefix.user()));
+        assert_eq!(None, prefix.prefix().and_then(|prefix| prefix.host()));
+
+        let prefix = message.query().prefix(true, false)?;
+        assert_eq!(Some("name"), prefix.prefix().map(|prefix| prefix.name()));
+        assert_eq!(
+            Some("user"),
+            prefix.prefix().and_then(|prefix| prefix.user())
+        );
+        assert_eq!(None, prefix.prefix().and_then(|prefix| prefix.host()));
+
+        let prefix = message.query().prefix(false, true)?;
+        assert_eq!(Some("name"), prefix.prefix().map(|prefix| prefix.name()));
+        assert_eq!(None, prefix.prefix().and_then(|prefix| prefix.user()));
+        assert_eq!(
+            Some("host"),
+            prefix.prefix().and_then(|prefix| prefix.host())
+        );
+
+        let prefix = message.query().prefix(true, true)?;
+        assert_eq!(Some("name"), prefix.prefix().map(|prefix| prefix.name()));
+        assert_eq!(
+            Some("user"),
+            prefix.prefix().and_then(|prefix| prefix.user())
+        );
+        assert_eq!(
+            Some("host"),
+            prefix.prefix().and_then(|prefix| prefix.host())
+        );
 
         Ok(())
     }

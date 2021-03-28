@@ -1,23 +1,51 @@
+use crate::prefix::Prefixed;
+use crate::tags::Taggable;
 use crate::{InvalidIrcFormatError, Message};
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use crate::tags::Taggable;
 
-pub type Prefix<'a> = (&'a str, Option<&'a str>, Option<&'a str>);
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ParsedPrefix<'a>(pub &'a str, pub Option<&'a str>, pub Option<&'a str>);
+
+impl<'a> Prefixed<'a> for ParsedPrefix<'a> {
+    fn name(&self) -> &'a str {
+        self.0
+    }
+
+    fn user(&self) -> Option<&'a str> {
+        self.1
+    }
+
+    fn host(&self) -> Option<&'a str> {
+        self.2
+    }
+}
+
+impl<'a> From<(&'a str, Option<&'a str>, Option<&'a str>)> for ParsedPrefix<'a> {
+    fn from((name, user, host): (&'a str, Option<&'a str>, Option<&'a str>)) -> Self {
+        Self(name, user, host)
+    }
+}
 
 /// Fully parsed Message instead of parsing on demand. Instead of
 /// zero-allocation this struct implements zero-copy parsing.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Parsed<'a> {
     tags: HashMap<&'a str, &'a str>,
-    prefix: Option<Prefix<'a>>,
+    prefix: Option<ParsedPrefix<'a>>,
     command: &'a str,
     params: Vec<&'a str>,
     trailing: Option<&'a str>,
 }
 
 impl<'a> Parsed<'a> {
-    pub(crate) fn new(tags: HashMap<&'a str, &'a str>, prefix: Option<Prefix<'a>>, command: &'a str, params: Vec<&'a str>, trailing: Option<&'a str>) -> Self {
+    pub(crate) fn new(
+        tags: HashMap<&'a str, &'a str>,
+        prefix: Option<ParsedPrefix<'a>>,
+        command: &'a str,
+        params: Vec<&'a str>,
+        trailing: Option<&'a str>,
+    ) -> Self {
         Self {
             tags,
             prefix,
@@ -31,7 +59,7 @@ impl<'a> Parsed<'a> {
         self.command
     }
 
-    pub fn prefix(&self) -> Option<&Prefix<'a>> {
+    pub fn prefix(&self) -> Option<&ParsedPrefix<'a>> {
         self.prefix.as_ref()
     }
 
@@ -72,7 +100,7 @@ impl<'a> TryFrom<&'a Message> for Parsed<'a> {
             .map(|tags| tags.iter().collect::<HashMap<_, _>>())
             .unwrap_or_default();
 
-        let prefix = value.prefix()?.map(|prefix| prefix.into_parts());
+        let prefix = value.prefix()?.map(|prefix| prefix.into_parts().into());
 
         let (params, trailing) = value
             .params()
@@ -92,6 +120,7 @@ impl<'a> TryFrom<&'a Message> for Parsed<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::prefix::Prefixed;
     use crate::{InvalidIrcFormatError, Message};
 
     #[test]
@@ -107,7 +136,10 @@ mod tests {
 
         assert_eq!(Some(&"value1"), parsed.tag("tag1"));
         assert_eq!(Some(&"value2"), parsed.tag("tag2"));
-        assert_eq!(Some(&("name", Some("user"), Some("host"))), parsed.prefix());
+        assert_eq!(
+            Some(("name", Some("user"), Some("host"))),
+            parsed.prefix().map(|prefix| prefix.as_parts())
+        );
         assert_eq!(Some(&"param0"), parsed.param(0));
         assert_eq!(Some(&"Trailing Parameter!"), parsed.trailing());
 
