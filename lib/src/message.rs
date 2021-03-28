@@ -170,7 +170,7 @@ impl Message {
                     without_tags
                 }
             }
-            None => &self.raw,
+            None => without_tags,
         };
         match without_prefix.find(' ') {
             Some(end) => &without_prefix[..end],

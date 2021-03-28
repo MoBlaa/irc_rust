@@ -1,6 +1,7 @@
 use crate::{InvalidIrcFormatError, Message, Parsed};
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
+use crate::tags::Taggable;
 
 /// Implements Zero-Copy __partial__ parsing by only parsing and extracting the desired
 /// parts of the message. Implements the state pattern for a clear query structure.
@@ -21,6 +22,13 @@ pub struct TagsState<'a> {
 
 impl<'a> State for TagsState<'a> {}
 
+impl<'a> Taggable<'a> for TagsState<'a> {
+    fn tag(&self, key: &str) -> Option<&'a str> {
+        // TODO: Remove Copy
+        self.tags.get(key).copied()
+    }
+}
+
 type Prefix<'a> = (&'a str, Option<&'a str>, Option<&'a str>);
 
 pub struct PrefixState<'a> {
@@ -33,6 +41,10 @@ impl<'a> State for PrefixState<'a> {}
 impl<'a> State for Parsed<'a> {}
 
 impl<'a, T: State> Query<'a, T> {
+    pub fn command(&self) -> &'a str {
+        self.message.command()
+    }
+
     fn parse_tags(&self, mut searched: HashSet<&'a str>) -> Result<HashMap<&'a str, &'a str>, InvalidIrcFormatError> {
         let parsed = self
             .message
@@ -144,5 +156,40 @@ impl<'a, T: State> Deref for Query<'a, T> {
 
     fn deref(&self) -> &Self::Target {
         &self.state
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Message;
+    use crate::tags::Taggable;
+    use std::error::Error;
+
+    #[test]
+    fn test_tags() -> Result<(), Box<dyn Error>> {
+        let message = Message::builder("CMD").build();
+        assert_eq!("CMD", message.query().command());
+        let tags = message.query().tags(vec!["test"])?;
+        assert_eq!(None, tags.tag("test"));
+
+        let message = Message::builder("CMD")
+            .tag("test", "value")
+            .tag("test1", "value1")
+            .build();
+        assert_eq!("CMD", message.query().command());
+        let tags = message.query().tags(vec!["test"])?;
+        assert_eq!(Some("value"), tags.tag("test"));
+        assert_eq!(None, tags.tag("test1"));
+
+        let tags = message.query().tags(vec!["test", "test1"])?;
+        assert_eq!(Some("value"), tags.tag("test"));
+        assert_eq!(Some("value1"), tags.tag("test1"));
+
+        let tags = message.query().tags(vec!["test", "test1", "test2"])?;
+        assert_eq!(Some("value"), tags.tag("test"));
+        assert_eq!(Some("value1"), tags.tag("test1"));
+        assert_eq!(None, tags.tag("test2"));
+
+        Ok(())
     }
 }

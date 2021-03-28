@@ -1,6 +1,7 @@
 use crate::{InvalidIrcFormatError, Message};
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use crate::tags::Taggable;
 
 pub type Prefix<'a> = (&'a str, Option<&'a str>, Option<&'a str>);
 
@@ -52,6 +53,13 @@ impl<'a> Parsed<'a> {
 
     pub fn tags(&self) -> impl Iterator<Item = (&&'a str, &&'a str)> {
         self.tags.iter()
+    }
+}
+
+impl<'a> Taggable<'a> for Parsed<'a> {
+    fn tag(&self, key: &str) -> Option<&'a str> {
+        // TODO: Remove copy
+        self.tags.get(key).copied()
     }
 }
 
