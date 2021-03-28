@@ -27,7 +27,7 @@ impl<'a> Prefix<'a> {
     }
 
     // Returns the (server- or nick-) name.
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &'a str {
         &self.raw[self.name_bounds()]
     }
 
@@ -36,7 +36,7 @@ impl<'a> Prefix<'a> {
     }
 
     // Returns the host if present.
-    pub fn host(&self) -> Option<&str> {
+    pub fn host(&self) -> Option<&'a str> {
         self.host_bounds().map(|range| &self.raw[range])
     }
 
@@ -48,7 +48,7 @@ impl<'a> Prefix<'a> {
     }
 
     // Returns the host if present.
-    pub fn user(&self) -> Option<&str> {
+    pub fn user(&self) -> Option<&'a str> {
         self.user_bounds().map(|range| &self.raw[range])
     }
 
