@@ -4,7 +4,7 @@ extern crate test;
 use rand::Rng;
 use test::Bencher;
 
-use irc_rust::{InvalidIrcFormatError, Message, Params, Tags};
+use irc_rust::{InvalidIrcFormatError, Message, Parameterized, Params, Prefixed, Tags};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 

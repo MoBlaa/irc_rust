@@ -2,7 +2,7 @@ extern crate rand;
 extern crate test;
 
 use self::rand::Rng;
-use irc_rust::{InvalidIrcFormatError, Message, Parsed};
+use irc_rust::{InvalidIrcFormatError, Message, Parameterized, Parsed, Prefixed, Taggable};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use test::Bencher;
@@ -19,10 +19,10 @@ fn bench_full_parsed(b: &mut Bencher) {
 
         let val = parsed.tag("key1");
         assert!(val.is_some());
-        assert_eq!(val.unwrap(), &"value1");
+        assert_eq!(val.unwrap(), "value1");
         let val = parsed.tag("key2");
         assert!(val.is_some());
-        assert_eq!(val.unwrap(), &"value2");
+        assert_eq!(val.unwrap(), "value2");
 
         let mut tags = parsed.tags();
         let next_is_key1 = |next: Option<(&&str, &&str)>| {
@@ -43,8 +43,8 @@ fn bench_full_parsed(b: &mut Bencher) {
 
         let prefix = parsed.prefix();
         assert!(prefix.is_some());
-        let (name, user, host) = prefix.unwrap();
-        assert_eq!(name, &"name");
+        let (name, user, host) = prefix.unwrap().as_parts();
+        assert_eq!(name, "name");
         assert!(user.is_some());
         assert_eq!(user.unwrap(), "user");
         assert_eq!(host.unwrap(), "host");
@@ -57,7 +57,7 @@ fn bench_full_parsed(b: &mut Bencher) {
         assert!(iter.next().is_none());
         let trailing = parsed.trailing();
         assert!(trailing.is_some());
-        assert_eq!(trailing.unwrap(), &"trailing")
+        assert_eq!(trailing.unwrap(), "trailing")
     });
 }
 

@@ -18,12 +18,12 @@ use std::ops::Deref;
 /// While the order of the filtered elements is preserved the original index will get lost.
 ///
 /// ```rust
-/// use irc_rust::Message;
+/// use irc_rust::{Message, Parameterized};
 ///
 /// let message = Message::builder("CMD").param("param0").param("param1").param("param2").build();
 /// let query = message.partial()
 ///     // Query vor "param1" only
-///     .params(vec![1], false)?;
+///     .params(vec![1], false).unwrap();
 /// // Note that the index of "param1" has changed from 1 to 0
 /// assert_eq!(Some("param1"), query.param(0));
 /// ```

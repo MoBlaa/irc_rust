@@ -5,10 +5,10 @@ use crate::builder::Message as MessageBuilder;
 use crate::errors::InvalidIrcFormatError;
 use crate::params::Params;
 use crate::parsed::Parsed;
+use crate::partial::{Init, Partial};
 use crate::prefix::Prefix;
 use crate::tags::Tags;
 use std::convert::TryFrom;
-use crate::partial::{Partial, Init};
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 ///
