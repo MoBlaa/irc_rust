@@ -49,7 +49,7 @@ fn bench_full_parsed(b: &mut Bencher) {
         assert_eq!(user.unwrap(), "user");
         assert_eq!(host.unwrap(), "host");
 
-        assert_eq!(parsed.command(), "CMD");
+        assert_eq!(parsed.command(), Some("CMD"));
 
         let mut iter = parsed.params();
         assert_eq!(iter.next().unwrap(), &"param1");

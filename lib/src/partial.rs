@@ -72,13 +72,34 @@ impl<'a> Taggable<'a> for PrefixState<'a> {
 
 impl<'a> State for PrefixState<'a> {}
 
+pub struct CommandState<'a> {
+    tags: HashMap<&'a str, &'a str>,
+    prefix: Option<ParsedPrefix<'a>>,
+    command: Option<&'a str>,
+}
+
+impl<'a> CommandState<'a> {
+    pub fn prefix(&self) -> Option<&ParsedPrefix<'a>> {
+        self.prefix.as_ref()
+    }
+
+    pub fn command(&self) -> Option<&'a str> {
+        self.command
+    }
+}
+
+impl<'a> Taggable<'a> for CommandState<'a> {
+    fn tag(&self, key: &str) -> Option<&'a str> {
+        // TODO: Remove Copy
+        self.tags.get(key).copied()
+    }
+}
+
+impl<'a> State for CommandState<'a> {}
+
 impl<'a> State for Parsed<'a> {}
 
 impl<'a, T: State> Partial<'a, T> {
-    pub fn command(&self) -> &'a str {
-        self.message.command()
-    }
-
     fn parse_tags(
         &self,
         mut searched: HashSet<&'a str>,
@@ -185,13 +206,24 @@ impl<'a> Partial<'a, Init> {
         })
     }
 
+    pub fn command(self) -> Partial<'a, CommandState<'a>> {
+        let command = self.message.command();
+        Partial {
+            message: self.message,
+            state: CommandState {
+                tags: HashMap::new(),
+                prefix: None,
+                command: Some(command),
+            },
+        }
+    }
+
     pub fn params(self, indexes: Vec<usize>, trailing: bool) -> Partial<'a, Parsed<'a>> {
         let (params, trailing) = self.parse_params(indexes, trailing);
 
-        let command = self.command();
         Partial {
             message: self.message,
-            state: Parsed::new(HashMap::new(), None, command, params, trailing),
+            state: Parsed::new(HashMap::new(), None, None, params, trailing),
         }
     }
 }
@@ -212,28 +244,61 @@ impl<'a> Partial<'a, TagsState<'a>> {
         })
     }
 
+    pub fn command(self) -> Partial<'a, CommandState<'a>> {
+        let command = self.message.command();
+        Partial {
+            message: self.message,
+            state: CommandState {
+                tags: self.state.tags,
+                prefix: None,
+                command: Some(command),
+            },
+        }
+    }
+
     pub fn params(self, indexes: Vec<usize>, trailing: bool) -> Partial<'a, Parsed<'a>> {
         let (params, trailing) = self.parse_params(indexes, trailing);
 
-        let command = self.command();
         Partial {
             message: self.message,
-            state: Parsed::new(self.state.tags, None, command, params, trailing),
+            state: Parsed::new(self.state.tags, None, None, params, trailing),
         }
     }
 }
 
 impl<'a> Partial<'a, PrefixState<'a>> {
+    pub fn command(self) -> Partial<'a, CommandState<'a>> {
+        let command = self.message.command();
+        Partial {
+            message: self.message,
+            state: CommandState {
+                tags: self.state.tags,
+                prefix: self.state.prefix,
+                command: Some(command),
+            },
+        }
+    }
+
     pub fn params(self, indexes: Vec<usize>, trailing: bool) -> Partial<'a, Parsed<'a>> {
         let (params, trailing) = self.parse_params(indexes, trailing);
 
-        let command = self.command();
+        Partial {
+            message: self.message,
+            state: Parsed::new(self.state.tags, self.state.prefix, None, params, trailing),
+        }
+    }
+}
+
+impl<'a> Partial<'a, CommandState<'a>> {
+    pub fn params(self, indexes: Vec<usize>, trailing: bool) -> Partial<'a, Parsed<'a>> {
+        let (params, trailing) = self.parse_params(indexes, trailing);
+
         Partial {
             message: self.message,
             state: Parsed::new(
                 self.state.tags,
                 self.state.prefix,
-                command,
+                self.state.command,
                 params,
                 trailing,
             ),
@@ -271,8 +336,9 @@ mod tests {
             .partial()
             .tags(vec!["tag1"])?
             .prefix(true, false)?
+            .command()
             .params(vec![1], true);
-        assert_eq!("CMD", query.command());
+        assert_eq!(Some("CMD"), query.command());
         assert_eq!(Some("value1"), query.tag("tag1"));
         assert_eq!(None, query.tag("tag2"));
         assert_eq!(
@@ -289,7 +355,7 @@ mod tests {
     #[test]
     fn test_tags() -> Result<(), Box<dyn Error>> {
         let message = Message::builder("CMD").build();
-        assert_eq!("CMD", message.partial().command());
+        assert_eq!(Some("CMD"), message.partial().command().command());
         let tags = message.partial().tags(vec!["test"])?;
         assert_eq!(None, tags.tag("test"));
 
@@ -297,7 +363,7 @@ mod tests {
             .tag("test", "value")
             .tag("test1", "value1")
             .build();
-        assert_eq!("CMD", message.partial().command());
+        assert_eq!(Some("CMD"), message.partial().command().command());
         let tags = message.partial().tags(vec!["test"])?;
         assert_eq!(Some("value"), tags.tag("test"));
         assert_eq!(None, tags.tag("test1"));

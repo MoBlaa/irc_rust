@@ -30,11 +30,13 @@ impl<'a> From<(&'a str, Option<&'a str>, Option<&'a str>)> for ParsedPrefix<'a> 
 
 /// Fully parsed Message instead of parsing on demand. Instead of
 /// zero-allocation this struct implements zero-copy parsing.
+///
+/// Implements a partially or fully parsed message.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Parsed<'a> {
     tags: HashMap<&'a str, &'a str>,
     prefix: Option<ParsedPrefix<'a>>,
-    command: &'a str,
+    command: Option<&'a str>,
     params: Vec<&'a str>,
     trailing: Option<&'a str>,
 }
@@ -43,7 +45,7 @@ impl<'a> Parsed<'a> {
     pub(crate) fn new(
         tags: HashMap<&'a str, &'a str>,
         prefix: Option<ParsedPrefix<'a>>,
-        command: &'a str,
+        command: Option<&'a str>,
         params: Vec<&'a str>,
         trailing: Option<&'a str>,
     ) -> Self {
@@ -56,7 +58,7 @@ impl<'a> Parsed<'a> {
         }
     }
 
-    pub fn command(&self) -> &'a str {
+    pub fn command(&self) -> Option<&'a str> {
         self.command
     }
 
@@ -111,7 +113,7 @@ impl<'a> TryFrom<&'a Message> for Parsed<'a> {
         Ok(Self {
             tags,
             prefix,
-            command: value.command(),
+            command: Some(value.command()),
             params,
             trailing,
         })
