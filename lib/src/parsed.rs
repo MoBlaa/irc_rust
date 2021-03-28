@@ -1,3 +1,4 @@
+use crate::params::Parameterized;
 use crate::prefix::Prefixed;
 use crate::tags::Taggable;
 use crate::{InvalidIrcFormatError, Message};
@@ -63,20 +64,8 @@ impl<'a> Parsed<'a> {
         self.prefix.as_ref()
     }
 
-    pub fn trailing(&self) -> Option<&&'a str> {
-        self.trailing.as_ref()
-    }
-
-    pub fn param(&self, index: usize) -> Option<&&'a str> {
-        self.params.get(index)
-    }
-
     pub fn params(&self) -> impl Iterator<Item = &&'a str> {
         self.params.iter()
-    }
-
-    pub fn tag(&self, key: &str) -> Option<&&'a str> {
-        self.tags.get(key)
     }
 
     pub fn tags(&self) -> impl Iterator<Item = (&&'a str, &&'a str)> {
@@ -88,6 +77,17 @@ impl<'a> Taggable<'a> for Parsed<'a> {
     fn tag(&self, key: &str) -> Option<&'a str> {
         // TODO: Remove copy
         self.tags.get(key).copied()
+    }
+}
+
+impl<'a> Parameterized<'a> for Parsed<'a> {
+    fn param(&self, index: usize) -> Option<&'a str> {
+        // TODO: Remove Copy
+        self.params.get(index).copied()
+    }
+
+    fn trailing(&self) -> Option<&'a str> {
+        self.trailing
     }
 }
 
@@ -120,7 +120,9 @@ impl<'a> TryFrom<&'a Message> for Parsed<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::params::Parameterized;
     use crate::prefix::Prefixed;
+    use crate::tags::Taggable;
     use crate::{InvalidIrcFormatError, Message};
 
     #[test]
@@ -134,14 +136,14 @@ mod tests {
             .build();
         let parsed = message.parsed()?;
 
-        assert_eq!(Some(&"value1"), parsed.tag("tag1"));
-        assert_eq!(Some(&"value2"), parsed.tag("tag2"));
+        assert_eq!(Some("value1"), parsed.tag("tag1"));
+        assert_eq!(Some("value2"), parsed.tag("tag2"));
         assert_eq!(
             Some(("name", Some("user"), Some("host"))),
             parsed.prefix().map(|prefix| prefix.as_parts())
         );
-        assert_eq!(Some(&"param0"), parsed.param(0));
-        assert_eq!(Some(&"Trailing Parameter!"), parsed.trailing());
+        assert_eq!(Some("param0"), parsed.param(0));
+        assert_eq!(Some("Trailing Parameter!"), parsed.trailing());
 
         Ok(())
     }

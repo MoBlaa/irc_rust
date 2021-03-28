@@ -1,5 +1,12 @@
 use core::fmt;
 
+pub trait Parameterized<'a> {
+    fn param(&self, index: usize) -> Option<&'a str>;
+    /// Returns the trailing parameter which is separated from the
+    /// other parameters with ' :'.
+    fn trailing(&self) -> Option<&'a str>;
+}
+
 /// Parameter list with an optional trailing message.
 #[derive(Debug, Clone, Copy, Eq, Ord, PartialOrd, PartialEq, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -15,12 +22,6 @@ impl<'a> Params<'a> {
 
     fn trailing_start(&self) -> Option<usize> {
         self.raw.find(" :")
-    }
-
-    /// Returns the trailing parameter which is seperated from the
-    /// other parameters with ' :'.
-    pub fn trailing(&self) -> Option<&'a str> {
-        self.trailing_start().map(|index| &self.raw[index + 2..])
     }
 
     /// Create an iterator over the parameter list excluding the trailing parameter.
@@ -40,6 +41,17 @@ impl<'a> Params<'a> {
             None => (self.raw, None),
         };
         (params.split_whitespace(), trailing)
+    }
+}
+
+impl<'a> Parameterized<'a> for Params<'a> {
+    /// Use with caution as every invocation creates a new iterator.
+    fn param(&self, index: usize) -> Option<&'a str> {
+        self.iter().nth(index)
+    }
+
+    fn trailing(&self) -> Option<&'a str> {
+        self.trailing_start().map(|index| &self.raw[index + 2..])
     }
 }
 

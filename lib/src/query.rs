@@ -7,6 +7,26 @@ use std::ops::Deref;
 
 /// Implements Zero-Copy __partial__ parsing by only parsing and extracting the desired
 /// parts of the message. Implements the state pattern for a clear query structure.
+///
+/// TODO:
+///     - Add State to include Command
+///     - Parse raw String instead of Message (increase performance as currently multiple 'find' invocations happen)
+///     - Tags, Params and Prefix should return temporary references to parts of the string with lifetime 'a.
+///
+/// # Note on Parameters
+///
+/// While the order of the filtered elements is preserved the original index will get lost.
+///
+/// ```rust
+/// use irc_rust::Message;
+///
+/// let message = Message::builder("CMD").param("param0").param("param1").param("param2").build();
+/// let query = message.query()
+///     // Query vor "param1" only
+///     .params(vec![1], false)?;
+/// // Note that the index of "param1" has changed from 1 to 0
+/// assert_eq!(Some("param1"), query.param(0));
+/// ```
 pub struct Query<'a, S: State> {
     message: &'a Message,
     state: S,
@@ -39,6 +59,13 @@ pub struct PrefixState<'a> {
 impl<'a> PrefixState<'a> {
     pub fn prefix(&self) -> Option<&ParsedPrefix<'a>> {
         self.prefix.as_ref()
+    }
+}
+
+impl<'a> Taggable<'a> for PrefixState<'a> {
+    fn tag(&self, key: &str) -> Option<&'a str> {
+        // TODO: Remove Copy
+        self.tags.get(key).copied()
     }
 }
 
@@ -98,8 +125,7 @@ impl<'a, T: State> Query<'a, T> {
         trailing: bool,
     ) -> Result<(Vec<&'a str>, Option<&'a str>), InvalidIrcFormatError> {
         param_indexes.dedup();
-        // Sort in revere order to be able to pop
-        param_indexes.sort_by(|a, b| Ord::cmp(b, a));
+        param_indexes.sort();
 
         let result = match self.message.params() {
             None => (Vec::with_capacity(0), None),
@@ -159,6 +185,20 @@ impl<'a> Query<'a, Init> {
             },
         })
     }
+
+    pub fn params(
+        self,
+        indexes: Vec<usize>,
+        trailing: bool,
+    ) -> Result<Query<'a, Parsed<'a>>, InvalidIrcFormatError> {
+        let (params, trailing) = self.parse_params(indexes, trailing)?;
+
+        let command = self.command();
+        Ok(Query {
+            message: self.message,
+            state: Parsed::new(HashMap::new(), None, command, params, trailing),
+        })
+    }
 }
 
 impl<'a> Query<'a, TagsState<'a>> {
@@ -176,6 +216,20 @@ impl<'a> Query<'a, TagsState<'a>> {
             },
         })
     }
+
+    pub fn params(
+        self,
+        indexes: Vec<usize>,
+        trailing: bool,
+    ) -> Result<Query<'a, Parsed<'a>>, InvalidIrcFormatError> {
+        let (params, trailing) = self.parse_params(indexes, trailing)?;
+
+        let command = self.command();
+        Ok(Query {
+            message: self.message,
+            state: Parsed::new(self.state.tags, None, command, params, trailing),
+        })
+    }
 }
 
 impl<'a> Query<'a, PrefixState<'a>> {
@@ -186,12 +240,13 @@ impl<'a> Query<'a, PrefixState<'a>> {
     ) -> Result<Query<'a, Parsed<'a>>, InvalidIrcFormatError> {
         let (params, trailing) = self.parse_params(indexes, trailing)?;
 
+        let command = self.command();
         Ok(Query {
             message: self.message,
             state: Parsed::new(
                 self.state.tags,
                 self.state.prefix,
-                self.message.command(),
+                command,
                 params,
                 trailing,
             ),
@@ -209,10 +264,40 @@ impl<'a, T: State> Deref for Query<'a, T> {
 
 #[cfg(test)]
 mod tests {
+    use crate::params::Parameterized;
     use crate::prefix::Prefixed;
     use crate::tags::Taggable;
     use crate::Message;
     use std::error::Error;
+
+    #[test]
+    fn test_overall() -> Result<(), Box<dyn Error>> {
+        let message = Message::builder("CMD")
+            .tag("tag1", "value1")
+            .tag("tag2", "value2")
+            .prefix("name", Some("user"), Some("host"))
+            .param("param0")
+            .param("param1")
+            .trailing("Trailing parameter!")
+            .build();
+        let query = message
+            .query()
+            .tags(vec!["tag1"])?
+            .prefix(true, false)?
+            .params(vec![1], true)?;
+        assert_eq!("CMD", query.command());
+        assert_eq!(Some("value1"), query.tag("tag1"));
+        assert_eq!(None, query.tag("tag2"));
+        assert_eq!(
+            Some(("name", Some("user"), None)),
+            query.prefix().map(|prefix| prefix.as_parts())
+        );
+        assert_eq!(Some("param1"), query.param(0));
+        assert_eq!(None, query.param(1));
+        assert_eq!(Some("Trailing parameter!"), query.trailing());
+
+        Ok(())
+    }
 
     #[test]
     fn test_tags() -> Result<(), Box<dyn Error>> {
