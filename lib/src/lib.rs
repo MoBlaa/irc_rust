@@ -68,6 +68,7 @@ mod message;
 mod params;
 mod parsed;
 mod prefix;
+mod query;
 mod tags;
 
 #[cfg(test)]

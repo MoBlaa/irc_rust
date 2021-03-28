@@ -6,6 +6,7 @@ use crate::errors::InvalidIrcFormatError;
 use crate::params::Params;
 use crate::parsed::Parsed;
 use crate::prefix::Prefix;
+use crate::query::{Init, Query};
 use crate::tags::Tags;
 use std::convert::TryFrom;
 
@@ -77,6 +78,11 @@ impl Message {
     /// Returns a fully parsed but zero-copy struct referencing the struct.
     pub fn parsed(&self) -> Result<Parsed, InvalidIrcFormatError> {
         Parsed::try_from(self)
+    }
+
+    /// Returns a query instance to partially parse the message.
+    pub fn query(&self) -> Query<Init> {
+        Query::new(self)
     }
 
     /// Creates a message builder as alternative to building an irc string before creating the message.
