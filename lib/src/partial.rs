@@ -109,11 +109,13 @@ impl<'a, T: State> Partial<'a, T> {
         user: bool,
         host: bool,
     ) -> Result<Option<ParsedPrefix<'a>>, InvalidIrcFormatError> {
-        let prefix = self.message.prefix()?.map(|prefix| ParsedPrefix(
-            prefix.name(),
-            if user { prefix.user() } else { None },
-            if host { prefix.host() } else { None },
-        ));
+        let prefix = self.message.prefix()?.map(|prefix| {
+            ParsedPrefix(
+                prefix.name(),
+                if user { prefix.user() } else { None },
+                if host { prefix.host() } else { None },
+            )
+        });
         Ok(prefix)
     }
 
@@ -183,11 +185,7 @@ impl<'a> Partial<'a, Init> {
         })
     }
 
-    pub fn params(
-        self,
-        indexes: Vec<usize>,
-        trailing: bool,
-    ) -> Partial<'a, Parsed<'a>> {
+    pub fn params(self, indexes: Vec<usize>, trailing: bool) -> Partial<'a, Parsed<'a>> {
         let (params, trailing) = self.parse_params(indexes, trailing);
 
         let command = self.command();
@@ -214,11 +212,7 @@ impl<'a> Partial<'a, TagsState<'a>> {
         })
     }
 
-    pub fn params(
-        self,
-        indexes: Vec<usize>,
-        trailing: bool,
-    ) -> Partial<'a, Parsed<'a>> {
+    pub fn params(self, indexes: Vec<usize>, trailing: bool) -> Partial<'a, Parsed<'a>> {
         let (params, trailing) = self.parse_params(indexes, trailing);
 
         let command = self.command();
@@ -230,11 +224,7 @@ impl<'a> Partial<'a, TagsState<'a>> {
 }
 
 impl<'a> Partial<'a, PrefixState<'a>> {
-    pub fn params(
-        self,
-        indexes: Vec<usize>,
-        trailing: bool,
-    ) -> Partial<'a, Parsed<'a>> {
+    pub fn params(self, indexes: Vec<usize>, trailing: bool) -> Partial<'a, Parsed<'a>> {
         let (params, trailing) = self.parse_params(indexes, trailing);
 
         let command = self.command();
