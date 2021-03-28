@@ -19,12 +19,12 @@ impl<'a> Params<'a> {
 
     /// Returns the trailing parameter which is seperated from the
     /// other parameters with ' :'.
-    pub fn trailing(&self) -> Option<&str> {
+    pub fn trailing(&self) -> Option<&'a str> {
         self.trailing_start().map(|index| &self.raw[index + 2..])
     }
 
     /// Create an iterator over the parameter list excluding the trailing parameter.
-    pub fn iter(&self) -> impl Iterator<Item = &str> {
+    pub fn iter(&self) -> impl Iterator<Item = &'a str> {
         let params = match self.trailing_start() {
             // Split into parameter list and trailing
             Some(index) => &self.raw[..index],
