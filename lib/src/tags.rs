@@ -2,6 +2,11 @@ use crate::errors::InvalidIrcFormatError;
 use core::fmt;
 use std::convert::TryFrom;
 
+/// Trait for everything which provides access to tags.
+pub trait Taggable<'a> {
+    fn tag(&self, key: &str) -> Option<&'a str>;
+}
+
 /// Tag Map as described through IRCv3.
 ///
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
@@ -60,8 +65,14 @@ impl<'a> Tags<'a> {
             })
     }
 
-    pub fn get(&self, key: &str) -> Option<&str> {
+    pub fn get(&self, key: &str) -> Option<&'a str> {
         self.find(key).map(|(start, end)| &self.raw[start..end])
+    }
+}
+
+impl<'a> Taggable<'a> for Tags<'a> {
+    fn tag(&self, key: &str) -> Option<&'a str> {
+        self.get(key)
     }
 }
 
