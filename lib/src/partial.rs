@@ -23,7 +23,7 @@ use std::ops::Deref;
 /// let message = Message::builder("CMD").param("param0").param("param1").param("param2").build();
 /// let query = message.partial()
 ///     // Query vor "param1" only
-///     .params(vec![1], false).unwrap();
+///     .params(vec![1], false);
 /// // Note that the index of "param1" has changed from 1 to 0
 /// assert_eq!(Some("param1"), query.param(0));
 /// ```
@@ -109,14 +109,11 @@ impl<'a, T: State> Partial<'a, T> {
         user: bool,
         host: bool,
     ) -> Result<Option<ParsedPrefix<'a>>, InvalidIrcFormatError> {
-        let prefix = match self.message.prefix()? {
-            None => None,
-            Some(prefix) => Some(ParsedPrefix(
-                prefix.name(),
-                if user { prefix.user() } else { None },
-                if host { prefix.host() } else { None },
-            )),
-        };
+        let prefix = self.message.prefix()?.map(|prefix| ParsedPrefix(
+            prefix.name(),
+            if user { prefix.user() } else { None },
+            if host { prefix.host() } else { None },
+        ));
         Ok(prefix)
     }
 
@@ -124,11 +121,11 @@ impl<'a, T: State> Partial<'a, T> {
         &self,
         mut param_indexes: Vec<usize>,
         trailing: bool,
-    ) -> Result<(Vec<&'a str>, Option<&'a str>), InvalidIrcFormatError> {
+    ) -> (Vec<&'a str>, Option<&'a str>) {
         param_indexes.dedup();
-        param_indexes.sort();
+        param_indexes.sort_unstable();
 
-        let result = match self.message.params() {
+        match self.message.params() {
             None => (Vec::with_capacity(0), None),
             Some(params) => {
                 let (mut params_iter, trailing_parsed) = params.into_parts();
@@ -147,8 +144,7 @@ impl<'a, T: State> Partial<'a, T> {
                     if trailing { trailing_parsed } else { None },
                 )
             }
-        };
-        Ok(result)
+        }
     }
 }
 
@@ -191,14 +187,14 @@ impl<'a> Partial<'a, Init> {
         self,
         indexes: Vec<usize>,
         trailing: bool,
-    ) -> Result<Partial<'a, Parsed<'a>>, InvalidIrcFormatError> {
-        let (params, trailing) = self.parse_params(indexes, trailing)?;
+    ) -> Partial<'a, Parsed<'a>> {
+        let (params, trailing) = self.parse_params(indexes, trailing);
 
         let command = self.command();
-        Ok(Partial {
+        Partial {
             message: self.message,
             state: Parsed::new(HashMap::new(), None, command, params, trailing),
-        })
+        }
     }
 }
 
@@ -222,14 +218,14 @@ impl<'a> Partial<'a, TagsState<'a>> {
         self,
         indexes: Vec<usize>,
         trailing: bool,
-    ) -> Result<Partial<'a, Parsed<'a>>, InvalidIrcFormatError> {
-        let (params, trailing) = self.parse_params(indexes, trailing)?;
+    ) -> Partial<'a, Parsed<'a>> {
+        let (params, trailing) = self.parse_params(indexes, trailing);
 
         let command = self.command();
-        Ok(Partial {
+        Partial {
             message: self.message,
             state: Parsed::new(self.state.tags, None, command, params, trailing),
-        })
+        }
     }
 }
 
@@ -238,11 +234,11 @@ impl<'a> Partial<'a, PrefixState<'a>> {
         self,
         indexes: Vec<usize>,
         trailing: bool,
-    ) -> Result<Partial<'a, Parsed<'a>>, InvalidIrcFormatError> {
-        let (params, trailing) = self.parse_params(indexes, trailing)?;
+    ) -> Partial<'a, Parsed<'a>> {
+        let (params, trailing) = self.parse_params(indexes, trailing);
 
         let command = self.command();
-        Ok(Partial {
+        Partial {
             message: self.message,
             state: Parsed::new(
                 self.state.tags,
@@ -251,7 +247,7 @@ impl<'a> Partial<'a, PrefixState<'a>> {
                 params,
                 trailing,
             ),
-        })
+        }
     }
 }
 
@@ -285,7 +281,7 @@ mod tests {
             .partial()
             .tags(vec!["tag1"])?
             .prefix(true, false)?
-            .params(vec![1], true)?;
+            .params(vec![1], true);
         assert_eq!("CMD", query.command());
         assert_eq!(Some("value1"), query.tag("tag1"));
         assert_eq!(None, query.tag("tag2"));
