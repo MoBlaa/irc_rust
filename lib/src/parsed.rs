@@ -16,6 +16,16 @@ pub struct Parsed<'a> {
 }
 
 impl<'a> Parsed<'a> {
+    pub(crate) fn new(tags: HashMap<&'a str, &'a str>, prefix: Option<Prefix<'a>>, command: &'a str, params: Vec<&'a str>, trailing: Option<&'a str>) -> Self {
+        Self {
+            tags,
+            prefix,
+            command,
+            params,
+            trailing,
+        }
+    }
+
     pub fn command(&self) -> &'a str {
         self.command
     }
