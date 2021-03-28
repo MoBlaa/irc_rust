@@ -6,9 +6,9 @@ use crate::errors::InvalidIrcFormatError;
 use crate::params::Params;
 use crate::parsed::Parsed;
 use crate::prefix::Prefix;
-use crate::query::{Init, Query};
 use crate::tags::Tags;
 use std::convert::TryFrom;
+use crate::partial::{Partial, Init};
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 ///
@@ -81,8 +81,8 @@ impl Message {
     }
 
     /// Returns a query instance to partially parse the message.
-    pub fn query(&self) -> Query<Init> {
-        Query::new(self)
+    pub fn partial(&self) -> Partial<Init> {
+        Partial::new(self)
     }
 
     /// Creates a message builder as alternative to building an irc string before creating the message.

@@ -21,13 +21,14 @@ use std::ops::Deref;
 /// use irc_rust::Message;
 ///
 /// let message = Message::builder("CMD").param("param0").param("param1").param("param2").build();
-/// let query = message.query()
+/// let query = message.partial()
 ///     // Query vor "param1" only
 ///     .params(vec![1], false)?;
 /// // Note that the index of "param1" has changed from 1 to 0
 /// assert_eq!(Some("param1"), query.param(0));
 /// ```
-pub struct Query<'a, S: State> {
+#[derive(Debug)]
+pub struct Partial<'a, S: State> {
     message: &'a Message,
     state: S,
 }
@@ -73,7 +74,7 @@ impl<'a> State for PrefixState<'a> {}
 
 impl<'a> State for Parsed<'a> {}
 
-impl<'a, T: State> Query<'a, T> {
+impl<'a, T: State> Partial<'a, T> {
     pub fn command(&self) -> &'a str {
         self.message.command()
     }
@@ -151,9 +152,9 @@ impl<'a, T: State> Query<'a, T> {
     }
 }
 
-impl<'a> Query<'a, Init> {
+impl<'a> Partial<'a, Init> {
     pub(crate) fn new(message: &'a Message) -> Self {
-        Query {
+        Partial {
             message,
             state: Init,
         }
@@ -162,8 +163,8 @@ impl<'a> Query<'a, Init> {
     pub fn tags<'b, I: IntoIterator<Item = &'a str>>(
         self,
         iter: I,
-    ) -> Result<Query<'a, TagsState<'a>>, InvalidIrcFormatError> {
-        Ok(Query {
+    ) -> Result<Partial<'a, TagsState<'a>>, InvalidIrcFormatError> {
+        Ok(Partial {
             message: self.message,
             state: TagsState {
                 tags: self.parse_tags(iter.into_iter().collect::<HashSet<_>>())?,
@@ -175,9 +176,9 @@ impl<'a> Query<'a, Init> {
         self,
         user: bool,
         host: bool,
-    ) -> Result<Query<'a, PrefixState<'a>>, InvalidIrcFormatError> {
+    ) -> Result<Partial<'a, PrefixState<'a>>, InvalidIrcFormatError> {
         let prefix = self.parse_prefix(user, host)?;
-        Ok(Query {
+        Ok(Partial {
             message: self.message,
             state: PrefixState {
                 tags: HashMap::with_capacity(0),
@@ -190,25 +191,25 @@ impl<'a> Query<'a, Init> {
         self,
         indexes: Vec<usize>,
         trailing: bool,
-    ) -> Result<Query<'a, Parsed<'a>>, InvalidIrcFormatError> {
+    ) -> Result<Partial<'a, Parsed<'a>>, InvalidIrcFormatError> {
         let (params, trailing) = self.parse_params(indexes, trailing)?;
 
         let command = self.command();
-        Ok(Query {
+        Ok(Partial {
             message: self.message,
             state: Parsed::new(HashMap::new(), None, command, params, trailing),
         })
     }
 }
 
-impl<'a> Query<'a, TagsState<'a>> {
+impl<'a> Partial<'a, TagsState<'a>> {
     pub fn prefix(
         self,
         user: bool,
         host: bool,
-    ) -> Result<Query<'a, PrefixState<'a>>, InvalidIrcFormatError> {
+    ) -> Result<Partial<'a, PrefixState<'a>>, InvalidIrcFormatError> {
         let prefix = self.parse_prefix(user, host)?;
-        Ok(Query {
+        Ok(Partial {
             message: self.message,
             state: PrefixState {
                 tags: self.state.tags,
@@ -221,27 +222,27 @@ impl<'a> Query<'a, TagsState<'a>> {
         self,
         indexes: Vec<usize>,
         trailing: bool,
-    ) -> Result<Query<'a, Parsed<'a>>, InvalidIrcFormatError> {
+    ) -> Result<Partial<'a, Parsed<'a>>, InvalidIrcFormatError> {
         let (params, trailing) = self.parse_params(indexes, trailing)?;
 
         let command = self.command();
-        Ok(Query {
+        Ok(Partial {
             message: self.message,
             state: Parsed::new(self.state.tags, None, command, params, trailing),
         })
     }
 }
 
-impl<'a> Query<'a, PrefixState<'a>> {
+impl<'a> Partial<'a, PrefixState<'a>> {
     pub fn params(
         self,
         indexes: Vec<usize>,
         trailing: bool,
-    ) -> Result<Query<'a, Parsed<'a>>, InvalidIrcFormatError> {
+    ) -> Result<Partial<'a, Parsed<'a>>, InvalidIrcFormatError> {
         let (params, trailing) = self.parse_params(indexes, trailing)?;
 
         let command = self.command();
-        Ok(Query {
+        Ok(Partial {
             message: self.message,
             state: Parsed::new(
                 self.state.tags,
@@ -254,7 +255,7 @@ impl<'a> Query<'a, PrefixState<'a>> {
     }
 }
 
-impl<'a, T: State> Deref for Query<'a, T> {
+impl<'a, T: State> Deref for Partial<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -281,7 +282,7 @@ mod tests {
             .trailing("Trailing parameter!")
             .build();
         let query = message
-            .query()
+            .partial()
             .tags(vec!["tag1"])?
             .prefix(true, false)?
             .params(vec![1], true)?;
@@ -302,24 +303,24 @@ mod tests {
     #[test]
     fn test_tags() -> Result<(), Box<dyn Error>> {
         let message = Message::builder("CMD").build();
-        assert_eq!("CMD", message.query().command());
-        let tags = message.query().tags(vec!["test"])?;
+        assert_eq!("CMD", message.partial().command());
+        let tags = message.partial().tags(vec!["test"])?;
         assert_eq!(None, tags.tag("test"));
 
         let message = Message::builder("CMD")
             .tag("test", "value")
             .tag("test1", "value1")
             .build();
-        assert_eq!("CMD", message.query().command());
-        let tags = message.query().tags(vec!["test"])?;
+        assert_eq!("CMD", message.partial().command());
+        let tags = message.partial().tags(vec!["test"])?;
         assert_eq!(Some("value"), tags.tag("test"));
         assert_eq!(None, tags.tag("test1"));
 
-        let tags = message.query().tags(vec!["test", "test1"])?;
+        let tags = message.partial().tags(vec!["test", "test1"])?;
         assert_eq!(Some("value"), tags.tag("test"));
         assert_eq!(Some("value1"), tags.tag("test1"));
 
-        let tags = message.query().tags(vec!["test", "test1", "test2"])?;
+        let tags = message.partial().tags(vec!["test", "test1", "test2"])?;
         assert_eq!(Some("value"), tags.tag("test"));
         assert_eq!(Some("value1"), tags.tag("test1"));
         assert_eq!(None, tags.tag("test2"));
@@ -331,19 +332,19 @@ mod tests {
     fn test_prefix() -> Result<(), Box<dyn Error>> {
         let message = Message::builder("CMD").build();
         assert_eq!("CMD", message.command());
-        let prefix = message.query().prefix(false, false)?;
+        let prefix = message.partial().prefix(false, false)?;
         assert_eq!(None, prefix.prefix());
 
         let message = Message::builder("CMD")
             .prefix("name", Some("user"), Some("host"))
             .build();
         assert_eq!("CMD", message.command());
-        let prefix = message.query().prefix(false, false)?;
+        let prefix = message.partial().prefix(false, false)?;
         assert_eq!(Some("name"), prefix.prefix().map(|prefix| prefix.name()));
         assert_eq!(None, prefix.prefix().and_then(|prefix| prefix.user()));
         assert_eq!(None, prefix.prefix().and_then(|prefix| prefix.host()));
 
-        let prefix = message.query().prefix(true, false)?;
+        let prefix = message.partial().prefix(true, false)?;
         assert_eq!(Some("name"), prefix.prefix().map(|prefix| prefix.name()));
         assert_eq!(
             Some("user"),
@@ -351,7 +352,7 @@ mod tests {
         );
         assert_eq!(None, prefix.prefix().and_then(|prefix| prefix.host()));
 
-        let prefix = message.query().prefix(false, true)?;
+        let prefix = message.partial().prefix(false, true)?;
         assert_eq!(Some("name"), prefix.prefix().map(|prefix| prefix.name()));
         assert_eq!(None, prefix.prefix().and_then(|prefix| prefix.user()));
         assert_eq!(
@@ -359,7 +360,7 @@ mod tests {
             prefix.prefix().and_then(|prefix| prefix.host())
         );
 
-        let prefix = message.query().prefix(true, true)?;
+        let prefix = message.partial().prefix(true, true)?;
         assert_eq!(Some("name"), prefix.prefix().map(|prefix| prefix.name()));
         assert_eq!(
             Some("user"),
