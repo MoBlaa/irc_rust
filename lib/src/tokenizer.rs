@@ -145,7 +145,7 @@ impl<'a> Tokenizer<'a, Start> {
         if !cfg.params.is_empty() {
             let mut params = Vec::with_capacity(cfg.params.len());
             cfg.params.dedup();
-            cfg.params.sort();
+            cfg.params.sort_unstable();
             let mut position = 0;
             for index in cfg.params {
                 let delta = index - position;
