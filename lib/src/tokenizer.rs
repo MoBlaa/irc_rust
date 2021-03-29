@@ -1,6 +1,6 @@
-use std::marker::PhantomData;
-use std::fmt::{Debug};
 use std::error::Error;
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 #[derive(Eq, PartialEq, Debug)]
 pub struct Tokenizer<'a, T: State> {
@@ -222,12 +222,14 @@ impl<'a> Tokenizer<'a, Prefix> {
     }
 
     /// Returns [None] if the prefix is badly formatted or no prefix is present.
-    pub fn parts(&mut self) -> Result<Option<(&'a str, Option<&'a str>, Option<&'a str>)>, ParserError> {
+    pub fn parts(
+        &mut self,
+    ) -> Result<Option<(&'a str, Option<&'a str>, Option<&'a str>)>, ParserError> {
         if let Some(raw) = self.raw.strip_prefix(' ') {
             self.raw = raw;
         }
         if !self.raw.starts_with(':') {
-            return Ok(None)
+            return Ok(None);
         }
         let (name, user, host) = (self.name()?, self.user()?, self.host()?);
         if name.is_none() && (user.is_some() || host.is_some()) {
@@ -376,7 +378,9 @@ impl std::fmt::Display for ParserError {
             ParserError::NoTagValueEnd => write!(f, "Tag Value has no ending ';' or ' '"),
             ParserError::NoCommand => write!(f, "Missing command in message"),
             ParserError::PrefixWithoutName => write!(f, "Prefix has to have name included"),
-            ParserError::PrefixUserWithoutHost => write!(f, "Prefix user is not allowed without host"),
+            ParserError::PrefixUserWithoutHost => {
+                write!(f, "Prefix user is not allowed without host")
+            }
         }
     }
 }
@@ -385,7 +389,7 @@ impl Error for ParserError {}
 
 #[cfg(test)]
 mod tests {
-    use crate::tokenizer::{Tokenizer, ParserError};
+    use crate::tokenizer::{ParserError, Tokenizer};
     use std::error::Error;
 
     #[test]
@@ -539,7 +543,7 @@ mod tests {
     }
 
     #[test]
-    fn test_trailing()  -> Result<(), Box<dyn Error>>{
+    fn test_trailing() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new("CMD :Trailing parameter!")?.tags();
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
