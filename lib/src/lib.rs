@@ -70,6 +70,7 @@ mod parsed;
 mod partial;
 mod prefix;
 mod tags;
+mod tokenizer;
 
 #[cfg(test)]
 mod test;
