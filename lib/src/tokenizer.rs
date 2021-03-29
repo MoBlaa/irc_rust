@@ -16,29 +16,29 @@ pub struct Start;
 impl State for Start {}
 
 #[derive(Eq, PartialEq, Debug)]
-pub struct Tags;
+pub struct TagsState;
 
-impl State for Tags {}
-
-#[derive(Eq, PartialEq, Debug)]
-pub struct Prefix;
-
-impl State for Prefix {}
+impl State for TagsState {}
 
 #[derive(Eq, PartialEq, Debug)]
-pub struct Command;
+pub struct PrefixState;
 
-impl State for Command {}
-
-#[derive(Eq, PartialEq, Debug)]
-pub struct Params;
-
-impl State for Params {}
+impl State for PrefixState {}
 
 #[derive(Eq, PartialEq, Debug)]
-pub struct Trailing;
+pub struct CommandState;
 
-impl State for Trailing {}
+impl State for CommandState {}
+
+#[derive(Eq, PartialEq, Debug)]
+pub struct ParamsState;
+
+impl State for ParamsState {}
+
+#[derive(Eq, PartialEq, Debug)]
+pub struct TrailingState;
+
+impl State for TrailingState {}
 
 impl<'a, S: State> Tokenizer<'a, S> {
     fn skip_until_char(&mut self, ch: char) {
@@ -59,11 +59,7 @@ impl<'a, S: State> Tokenizer<'a, S> {
             return;
         }
 
-        let end = self
-            .raw
-            .find(s)
-            .map(|space_pos| space_pos + 1)
-            .unwrap_or_else(|| self.raw.len());
+        let end = self.raw.find(s).unwrap_or_else(|| self.raw.len());
         self.raw = &self.raw[end..];
     }
 
@@ -104,14 +100,14 @@ impl<'a> Tokenizer<'a, Start> {
         }
     }
 
-    pub fn tags(self) -> Tokenizer<'a, Tags> {
+    pub fn tags(self) -> Tokenizer<'a, TagsState> {
         Tokenizer {
             raw: self.raw,
             state: PhantomData::default(),
         }
     }
 
-    pub fn prefix(mut self) -> Tokenizer<'a, Prefix> {
+    pub fn prefix(mut self) -> Tokenizer<'a, PrefixState> {
         self.skip_tags();
         Tokenizer {
             raw: self.raw,
@@ -119,7 +115,7 @@ impl<'a> Tokenizer<'a, Start> {
         }
     }
 
-    pub fn command(mut self) -> Tokenizer<'a, Command> {
+    pub fn command(mut self) -> Tokenizer<'a, CommandState> {
         self.skip_prefix();
         Tokenizer {
             raw: self.raw,
@@ -127,7 +123,7 @@ impl<'a> Tokenizer<'a, Start> {
         }
     }
 
-    pub fn params(mut self) -> Tokenizer<'a, Params> {
+    pub fn params(mut self) -> Tokenizer<'a, ParamsState> {
         self.skip_command();
         Tokenizer {
             raw: self.raw,
@@ -135,7 +131,7 @@ impl<'a> Tokenizer<'a, Start> {
         }
     }
 
-    pub fn trailing(mut self) -> Tokenizer<'a, Trailing> {
+    pub fn trailing(mut self) -> Tokenizer<'a, TrailingState> {
         self.skip_params();
         Tokenizer {
             raw: self.raw,
@@ -144,8 +140,8 @@ impl<'a> Tokenizer<'a, Start> {
     }
 }
 
-impl<'a> Tokenizer<'a, Tags> {
-    pub fn prefix(mut self) -> Tokenizer<'a, Prefix> {
+impl<'a> Tokenizer<'a, TagsState> {
+    pub fn prefix(mut self) -> Tokenizer<'a, PrefixState> {
         self.skip_tags();
         Tokenizer {
             raw: self.raw,
@@ -153,7 +149,7 @@ impl<'a> Tokenizer<'a, Tags> {
         }
     }
 
-    pub fn command(mut self) -> Tokenizer<'a, Command> {
+    pub fn command(mut self) -> Tokenizer<'a, CommandState> {
         self.skip_prefix();
         Tokenizer {
             raw: self.raw,
@@ -161,7 +157,7 @@ impl<'a> Tokenizer<'a, Tags> {
         }
     }
 
-    pub fn params(mut self) -> Tokenizer<'a, Params> {
+    pub fn params(mut self) -> Tokenizer<'a, ParamsState> {
         self.skip_command();
         Tokenizer {
             raw: self.raw,
@@ -169,7 +165,7 @@ impl<'a> Tokenizer<'a, Tags> {
         }
     }
 
-    pub fn trailing(mut self) -> Tokenizer<'a, Trailing> {
+    pub fn trailing(mut self) -> Tokenizer<'a, TrailingState> {
         self.skip_params();
         Tokenizer {
             raw: self.raw,
@@ -178,9 +174,11 @@ impl<'a> Tokenizer<'a, Tags> {
     }
 }
 
-impl<'a> Tokenizer<'a, Prefix> {
+pub type Prefix<'a> = (&'a str, Option<&'a str>, Option<&'a str>);
+
+impl<'a> Tokenizer<'a, PrefixState> {
     pub fn name(&mut self) -> Result<Option<&'a str>, ParserError> {
-        if self.raw.starts_with(" ") {
+        if self.raw.starts_with(' ') {
             self.raw = &self.raw[1..];
         }
         let mut name = None;
@@ -188,7 +186,7 @@ impl<'a> Tokenizer<'a, Prefix> {
             let end = self
                 .raw
                 .find(&['!', '@', ' '][..])
-                .ok_or_else(|| ParserError::NoCommand)?;
+                .ok_or(ParserError::NoCommand)?;
             let split = self.raw.split_at(end);
             name = Some(&split.0[1..]);
             self.raw = split.1;
@@ -202,7 +200,7 @@ impl<'a> Tokenizer<'a, Prefix> {
             let end = self
                 .raw
                 .find('@')
-                .ok_or_else(|| ParserError::PrefixUserWithoutHost)?;
+                .ok_or(ParserError::PrefixUserWithoutHost)?;
             let split = self.raw.split_at(end);
             user = Some(&split.0[1..]);
             self.raw = split.1;
@@ -213,7 +211,7 @@ impl<'a> Tokenizer<'a, Prefix> {
     pub fn host(&mut self) -> Result<Option<&'a str>, ParserError> {
         let mut host = None;
         if self.raw.starts_with('@') {
-            let end = self.raw.find(' ').ok_or_else(|| ParserError::NoCommand)?;
+            let end = self.raw.find(' ').ok_or(ParserError::NoCommand)?;
             let split = self.raw.split_at(end);
             host = Some(&split.0[1..]);
             self.raw = split.1;
@@ -222,9 +220,7 @@ impl<'a> Tokenizer<'a, Prefix> {
     }
 
     /// Returns [None] if the prefix is badly formatted or no prefix is present.
-    pub fn parts(
-        &mut self,
-    ) -> Result<Option<(&'a str, Option<&'a str>, Option<&'a str>)>, ParserError> {
+    pub fn parts(&mut self) -> Result<Option<Prefix>, ParserError> {
         if let Some(raw) = self.raw.strip_prefix(' ') {
             self.raw = raw;
         }
@@ -239,7 +235,7 @@ impl<'a> Tokenizer<'a, Prefix> {
         }
     }
 
-    pub fn command(mut self) -> Tokenizer<'a, Command> {
+    pub fn command(mut self) -> Tokenizer<'a, CommandState> {
         self.skip_prefix();
         Tokenizer {
             raw: self.raw,
@@ -247,7 +243,7 @@ impl<'a> Tokenizer<'a, Prefix> {
         }
     }
 
-    pub fn params(mut self) -> Tokenizer<'a, Params> {
+    pub fn params(mut self) -> Tokenizer<'a, ParamsState> {
         self.skip_command();
         Tokenizer {
             raw: self.raw,
@@ -255,7 +251,7 @@ impl<'a> Tokenizer<'a, Prefix> {
         }
     }
 
-    pub fn trailing(mut self) -> Tokenizer<'a, Trailing> {
+    pub fn trailing(mut self) -> Tokenizer<'a, TrailingState> {
         self.skip_params();
         Tokenizer {
             raw: self.raw,
@@ -264,7 +260,7 @@ impl<'a> Tokenizer<'a, Prefix> {
     }
 }
 
-impl<'a> Tokenizer<'a, Command> {
+impl<'a> Tokenizer<'a, CommandState> {
     pub fn command(&mut self) -> Result<&'a str, ParserError> {
         if self.raw.starts_with(' ') {
             self.raw = &self.raw[1..];
@@ -279,7 +275,7 @@ impl<'a> Tokenizer<'a, Command> {
         Ok(command)
     }
 
-    pub fn params(mut self) -> Tokenizer<'a, Params> {
+    pub fn params(mut self) -> Tokenizer<'a, ParamsState> {
         self.skip_command();
         Tokenizer {
             raw: self.raw,
@@ -287,7 +283,7 @@ impl<'a> Tokenizer<'a, Command> {
         }
     }
 
-    pub fn trailing(mut self) -> Tokenizer<'a, Trailing> {
+    pub fn trailing(mut self) -> Tokenizer<'a, TrailingState> {
         self.skip_params();
         Tokenizer {
             raw: self.raw,
@@ -296,8 +292,8 @@ impl<'a> Tokenizer<'a, Command> {
     }
 }
 
-impl<'a> Tokenizer<'a, Params> {
-    pub fn trailing(mut self) -> Tokenizer<'a, Trailing> {
+impl<'a> Tokenizer<'a, ParamsState> {
+    pub fn trailing(mut self) -> Tokenizer<'a, TrailingState> {
         self.skip_params();
         Tokenizer {
             raw: self.raw,
@@ -306,7 +302,7 @@ impl<'a> Tokenizer<'a, Params> {
     }
 }
 
-impl<'a> Iterator for Tokenizer<'a, Params> {
+impl<'a> Iterator for Tokenizer<'a, ParamsState> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -325,7 +321,7 @@ impl<'a> Iterator for Tokenizer<'a, Params> {
     }
 }
 
-impl<'a> Tokenizer<'a, Trailing> {
+impl<'a> Tokenizer<'a, TrailingState> {
     pub fn trailing(&self) -> Option<&'a str> {
         if self.raw.starts_with(" :") {
             Some(&self.raw[2..])
@@ -335,7 +331,7 @@ impl<'a> Tokenizer<'a, Trailing> {
     }
 }
 
-impl<'a> Iterator for Tokenizer<'a, Tags> {
+impl<'a> Iterator for Tokenizer<'a, TagsState> {
     type Item = Result<(&'a str, &'a str), ParserError>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -483,12 +479,7 @@ mod tests {
         let mut tokenizer = Tokenizer::new(":name!user CMD")?.tags();
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!(Some(("name", Some("user"), None)), tokenizer.parts()?);
-        let mut tokenizer = tokenizer.command();
-        assert_eq!("CMD", tokenizer.command()?);
-        let mut tokenizer = tokenizer.params();
-        assert_eq!(None, tokenizer.next());
-        assert_eq!(None, tokenizer.trailing().trailing());
+        assert_eq!(Err(ParserError::PrefixUserWithoutHost), tokenizer.parts());
 
         Ok(())
     }
@@ -575,6 +566,19 @@ mod tests {
         let mut tokenizer = tokenizer.params();
         assert_eq!(Some("param0"), tokenizer.next());
         assert_eq!(Some("param1"), tokenizer.next());
+        assert_eq!(
+            Some("Trailing parameter!@:=;"),
+            tokenizer.trailing().trailing()
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_only_trailing() -> Result<(), Box<dyn Error>> {
+        let tokenizer = Tokenizer::new(
+            "@key1=value1;key2=value2 :name!user@host CMD param0 param1 :Trailing parameter!@:=;",
+        )?;
         assert_eq!(
             Some("Trailing parameter!@:=;"),
             tokenizer.trailing().trailing()
