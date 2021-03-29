@@ -1,32 +1,41 @@
 use std::marker::PhantomData;
+use std::fmt::{Debug};
+use std::error::Error;
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct Tokenizer<'a, T: State> {
     raw: &'a str,
     state: PhantomData<T>,
 }
 
-pub trait State {}
+pub trait State: PartialEq + Eq + Debug {}
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct Start;
 
 impl State for Start {}
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct Tags;
 
 impl State for Tags {}
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct Prefix;
 
 impl State for Prefix {}
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct Command;
 
 impl State for Command {}
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct Params;
 
 impl State for Params {}
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct Trailing;
 
 impl State for Trailing {}
@@ -84,10 +93,14 @@ impl<'a, S: State> Tokenizer<'a, S> {
 }
 
 impl<'a> Tokenizer<'a, Start> {
-    pub fn new(raw: &'a str) -> Self {
-        Tokenizer {
-            raw,
-            state: PhantomData::default(),
+    pub fn new(raw: &'a str) -> Result<Self, ParserError> {
+        if raw.is_empty() {
+            Err(ParserError::NoCommand)
+        } else {
+            Ok(Tokenizer {
+                raw,
+                state: PhantomData::default(),
+            })
         }
     }
 
@@ -166,41 +179,62 @@ impl<'a> Tokenizer<'a, Tags> {
 }
 
 impl<'a> Tokenizer<'a, Prefix> {
-    /// Returns [None] if the prefix is badly formatted or no prefix is present.
-    pub fn parts(&mut self) -> (Option<&'a str>, Option<&'a str>, Option<&'a str>) {
+    pub fn name(&mut self) -> Result<Option<&'a str>, ParserError> {
         if self.raw.starts_with(" ") {
             self.raw = &self.raw[1..];
         }
         let mut name = None;
-        let mut user = None;
-        let mut host = None;
-
         if self.raw.starts_with(':') {
             let end = self
                 .raw
                 .find(&['!', '@', ' '][..])
-                .unwrap_or_else(|| self.raw.len());
+                .ok_or_else(|| ParserError::NoCommand)?;
             let split = self.raw.split_at(end);
             name = Some(&split.0[1..]);
             self.raw = split.1;
         }
+        Ok(name)
+    }
+
+    pub fn user(&mut self) -> Result<Option<&'a str>, ParserError> {
+        let mut user = None;
         if self.raw.starts_with('!') {
             let end = self
                 .raw
-                .find(&['@', ' '][..])
-                .unwrap_or_else(|| self.raw.len());
+                .find('@')
+                .ok_or_else(|| ParserError::PrefixUserWithoutHost)?;
             let split = self.raw.split_at(end);
             user = Some(&split.0[1..]);
             self.raw = split.1;
         }
+        Ok(user)
+    }
+
+    pub fn host(&mut self) -> Result<Option<&'a str>, ParserError> {
+        let mut host = None;
         if self.raw.starts_with('@') {
-            let end = self.raw.find(' ').unwrap_or_else(|| self.raw.len());
+            let end = self.raw.find(' ').ok_or_else(|| ParserError::NoCommand)?;
             let split = self.raw.split_at(end);
             host = Some(&split.0[1..]);
             self.raw = split.1;
         }
+        Ok(host)
+    }
 
-        (name, user, host)
+    /// Returns [None] if the prefix is badly formatted or no prefix is present.
+    pub fn parts(&mut self) -> Result<Option<(&'a str, Option<&'a str>, Option<&'a str>)>, ParserError> {
+        if let Some(raw) = self.raw.strip_prefix(' ') {
+            self.raw = raw;
+        }
+        if !self.raw.starts_with(':') {
+            return Ok(None)
+        }
+        let (name, user, host) = (self.name()?, self.user()?, self.host()?);
+        if name.is_none() && (user.is_some() || host.is_some()) {
+            Err(ParserError::PrefixWithoutName)
+        } else {
+            Ok(Some((name.unwrap(), user, host)))
+        }
     }
 
     pub fn command(mut self) -> Tokenizer<'a, Command> {
@@ -229,7 +263,7 @@ impl<'a> Tokenizer<'a, Prefix> {
 }
 
 impl<'a> Tokenizer<'a, Command> {
-    pub fn command(&mut self) -> Option<&'a str> {
+    pub fn command(&mut self) -> Result<&'a str, ParserError> {
         if self.raw.starts_with(' ') {
             self.raw = &self.raw[1..];
         }
@@ -237,10 +271,10 @@ impl<'a> Tokenizer<'a, Command> {
         let end = self.raw.find(' ').unwrap_or_else(|| self.raw.len());
         let (command, rest) = self.raw.split_at(end);
         if command.is_empty() {
-            return None;
+            return Err(ParserError::NoCommand);
         }
         self.raw = rest;
-        Some(command)
+        Ok(command)
     }
 
     pub fn params(mut self) -> Tokenizer<'a, Params> {
@@ -300,205 +334,248 @@ impl<'a> Tokenizer<'a, Trailing> {
 }
 
 impl<'a> Iterator for Tokenizer<'a, Tags> {
-    type Item = (&'a str, &'a str);
+    type Item = Result<(&'a str, &'a str), ParserError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.raw.is_empty() {
-            return None;
-        }
         match &self.raw[..1] {
             "@" | ";" => {
                 let key_start = 1;
-                let key_end = key_start + self.raw[key_start..].find(&['='][..])?;
+                let key_end = self.raw[key_start..].find(&['='][..]);
+                if key_end.is_none() {
+                    return Some(Err(ParserError::NoTagKeyEnd));
+                }
+                let key_end = key_start + key_end.unwrap();
                 let val_start = key_end + 1;
-                let val_end = val_start + self.raw[val_start..].find(&[';', ' '][..])?;
+                let val_end = self.raw[val_start..].find(&[';', ' '][..]);
+                if val_end.is_none() {
+                    return Some(Err(ParserError::NoTagValueEnd));
+                }
+                let val_end = val_start + val_end.unwrap();
                 let key_val = (&self.raw[key_start..key_end], &self.raw[val_start..val_end]);
                 self.raw = &self.raw[val_end..];
-                Some(key_val)
+                Some(Ok(key_val))
             }
             _ => None,
         }
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum ParserError {
+    NoTagKeyEnd,
+    NoTagValueEnd,
+    NoCommand,
+    PrefixWithoutName,
+    PrefixUserWithoutHost,
+}
+
+impl std::fmt::Display for ParserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParserError::NoTagKeyEnd => write!(f, "Tag Key has no ending '='"),
+            ParserError::NoTagValueEnd => write!(f, "Tag Value has no ending ';' or ' '"),
+            ParserError::NoCommand => write!(f, "Missing command in message"),
+            ParserError::PrefixWithoutName => write!(f, "Prefix has to have name included"),
+            ParserError::PrefixUserWithoutHost => write!(f, "Prefix user is not allowed without host"),
+        }
+    }
+}
+
+impl Error for ParserError {}
+
 #[cfg(test)]
 mod tests {
-    use crate::tokenizer::Tokenizer;
+    use crate::tokenizer::{Tokenizer, ParserError};
+    use std::error::Error;
 
     #[test]
     fn test_empty() {
-        let mut tokenizer = Tokenizer::new("").tags();
-        assert_eq!(None, tokenizer.next());
-        let mut tokenizer = tokenizer.prefix();
-        assert_eq!((None, None, None), tokenizer.parts());
-        let mut tokenizer = tokenizer.command();
-        assert_eq!(None, tokenizer.command());
-        let mut tokenizer = tokenizer.params();
-        assert_eq!(None, tokenizer.next());
-        assert_eq!(None, tokenizer.trailing().trailing())
+        assert_eq!(Err(ParserError::NoCommand), Tokenizer::new(""));
     }
 
     #[test]
-    fn test_command_only() {
-        let mut tokenizer = Tokenizer::new("CMD").tags();
+    fn test_command_only() -> Result<(), Box<dyn Error>> {
+        let mut tokenizer = Tokenizer::new("CMD")?.tags();
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!((None, None, None), tokenizer.parts());
+        assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(None, tokenizer.next());
-        assert_eq!(None, tokenizer.trailing().trailing())
+        assert_eq!(None, tokenizer.trailing().trailing());
+
+        Ok(())
     }
 
     #[test]
-    fn test_tag() {
-        let mut tokenizer = Tokenizer::new("@key1=value1 CMD").tags();
-        assert_eq!(Some(("key1", "value1")), tokenizer.next());
+    fn test_tag() -> Result<(), Box<dyn Error>> {
+        let mut tokenizer = Tokenizer::new("@key1=value1 CMD")?.tags();
+        assert_eq!(Some(Ok(("key1", "value1"))), tokenizer.next());
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!((None, None, None), tokenizer.parts());
+        assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(None, tokenizer.next());
-        assert_eq!(None, tokenizer.trailing().trailing())
+        assert_eq!(None, tokenizer.trailing().trailing());
+
+        Ok(())
     }
 
     #[test]
-    fn test_tags() {
-        let mut tokenizer = Tokenizer::new("@key1=value1;key2=value2 CMD").tags();
-        assert_eq!(Some(("key1", "value1")), tokenizer.next());
-        assert_eq!(Some(("key2", "value2")), tokenizer.next());
+    fn test_tags() -> Result<(), Box<dyn Error>> {
+        let mut tokenizer = Tokenizer::new("@key1=value1;key2=value2 CMD")?.tags();
+        assert_eq!(Some(Ok(("key1", "value1"))), tokenizer.next());
+        assert_eq!(Some(Ok(("key2", "value2"))), tokenizer.next());
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!((None, None, None), tokenizer.parts());
+        assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(None, tokenizer.next());
-        assert_eq!(None, tokenizer.trailing().trailing())
+        assert_eq!(None, tokenizer.trailing().trailing());
+
+        Ok(())
     }
 
     #[test]
-    fn test_prefix() {
-        let mut tokenizer = Tokenizer::new(":name!user@host CMD").tags();
+    fn test_prefix() -> Result<(), Box<dyn Error>> {
+        let mut tokenizer = Tokenizer::new(":name!user@host CMD")?.tags();
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(
-            (Some("name"), Some("user"), Some("host")),
-            tokenizer.parts()
+            Some(("name", Some("user"), Some("host"))),
+            tokenizer.parts()?
         );
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(None, tokenizer.next());
-        assert_eq!(None, tokenizer.trailing().trailing())
+        assert_eq!(None, tokenizer.trailing().trailing());
+
+        Ok(())
     }
 
     #[test]
-    fn test_prefix_name() {
-        let mut tokenizer = Tokenizer::new(":name CMD").tags();
+    fn test_prefix_name() -> Result<(), Box<dyn Error>> {
+        let mut tokenizer = Tokenizer::new(":name CMD")?.tags();
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!((Some("name"), None, None), tokenizer.parts());
+        assert_eq!(Some(("name", None, None)), tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(None, tokenizer.next());
-        assert_eq!(None, tokenizer.trailing().trailing())
+        assert_eq!(None, tokenizer.trailing().trailing());
+
+        Ok(())
     }
 
     #[test]
-    fn test_prefix_user() {
-        let mut tokenizer = Tokenizer::new(":name!user CMD").tags();
+    fn test_prefix_user() -> Result<(), Box<dyn Error>> {
+        let mut tokenizer = Tokenizer::new(":name!user CMD")?.tags();
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!((Some("name"), Some("user"), None), tokenizer.parts());
+        assert_eq!(Some(("name", Some("user"), None)), tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(None, tokenizer.next());
-        assert_eq!(None, tokenizer.trailing().trailing())
+        assert_eq!(None, tokenizer.trailing().trailing());
+
+        Ok(())
     }
 
     #[test]
-    fn test_prefix_host() {
-        let mut tokenizer = Tokenizer::new(":name@host CMD").tags();
+    fn test_prefix_host() -> Result<(), Box<dyn Error>> {
+        let mut tokenizer = Tokenizer::new(":name@host CMD")?.tags();
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!((Some("name"), None, Some("host")), tokenizer.parts());
+        assert_eq!(Some(("name", None, Some("host"))), tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(None, tokenizer.next());
-        assert_eq!(None, tokenizer.trailing().trailing())
+        assert_eq!(None, tokenizer.trailing().trailing());
+
+        Ok(())
     }
 
     #[test]
-    fn test_params() {
-        let mut tokenizer = Tokenizer::new("CMD param0 param1").tags();
+    fn test_params() -> Result<(), Box<dyn Error>> {
+        let mut tokenizer = Tokenizer::new("CMD param0 param1")?.tags();
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!((None, None, None), tokenizer.parts());
+        assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(Some("param0"), tokenizer.next());
         assert_eq!(Some("param1"), tokenizer.next());
         assert_eq!(None, tokenizer.next());
-        assert_eq!(None, tokenizer.trailing().trailing())
+        assert_eq!(None, tokenizer.trailing().trailing());
+
+        Ok(())
     }
 
     #[test]
-    fn test_params_trailing() {
-        let mut tokenizer = Tokenizer::new("CMD param0 param1 :Trailing parameter!").tags();
+    fn test_params_trailing() -> Result<(), Box<dyn Error>> {
+        let mut tokenizer = Tokenizer::new("CMD param0 param1 :Trailing parameter!")?.tags();
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!((None, None, None), tokenizer.parts());
+        assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(Some("param0"), tokenizer.next());
         assert_eq!(Some("param1"), tokenizer.next());
         assert_eq!(None, tokenizer.next());
-        assert_eq!(Some("Trailing parameter!"), tokenizer.trailing().trailing())
+        assert_eq!(Some("Trailing parameter!"), tokenizer.trailing().trailing());
+
+        Ok(())
     }
 
     #[test]
-    fn test_trailing() {
-        let mut tokenizer = Tokenizer::new("CMD :Trailing parameter!").tags();
+    fn test_trailing()  -> Result<(), Box<dyn Error>>{
+        let mut tokenizer = Tokenizer::new("CMD :Trailing parameter!")?.tags();
         assert_eq!(None, tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!((None, None, None), tokenizer.parts());
+        assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(None, tokenizer.next());
-        assert_eq!(Some("Trailing parameter!"), tokenizer.trailing().trailing())
+        assert_eq!(Some("Trailing parameter!"), tokenizer.trailing().trailing());
+
+        Ok(())
     }
 
     #[test]
-    fn test_all() {
+    fn test_all() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new(
             "@key1=value1;key2=value2 :name!user@host CMD param0 param1 :Trailing parameter!@:=;",
-        )
+        )?
         .tags();
-        assert_eq!(Some(("key1", "value1")), tokenizer.next());
-        assert_eq!(Some(("key2", "value2")), tokenizer.next());
+        assert_eq!(Some(Ok(("key1", "value1"))), tokenizer.next());
+        assert_eq!(Some(Ok(("key2", "value2"))), tokenizer.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(
-            (Some("name"), Some("user"), Some("host")),
-            tokenizer.parts()
+            Some(("name", Some("user"), Some("host"))),
+            tokenizer.parts()?
         );
         let mut tokenizer = tokenizer.command();
-        assert_eq!(Some("CMD"), tokenizer.command());
+        assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
         assert_eq!(Some("param0"), tokenizer.next());
         assert_eq!(Some("param1"), tokenizer.next());
         assert_eq!(
             Some("Trailing parameter!@:=;"),
             tokenizer.trailing().trailing()
-        )
+        );
+
+        Ok(())
     }
 }
