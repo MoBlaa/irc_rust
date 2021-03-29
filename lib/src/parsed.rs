@@ -77,14 +77,12 @@ impl<'a> Parsed<'a> {
 
 impl<'a> Taggable<'a> for Parsed<'a> {
     fn tag(&self, key: &str) -> Option<&'a str> {
-        // TODO: Remove copy
         self.tags.get(key).copied()
     }
 }
 
 impl<'a> Parameterized<'a> for Parsed<'a> {
     fn param(&self, index: usize) -> Option<&'a str> {
-        // TODO: Remove Copy
         self.params.get(index).copied()
     }
 

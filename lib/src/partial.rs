@@ -10,7 +10,6 @@ use std::ops::Deref;
 ///
 /// TODO:
 ///     - Parse raw String instead of Message (increase performance as currently multiple 'find' invocations happen)
-///     - Tags, Params and Prefix should return temporary references to parts of the string with lifetime 'a. (&&'a str). Currently implicit Copies happen
 ///
 /// # Note on Parameters
 ///
@@ -46,7 +45,6 @@ impl<'a> State for TagsState<'a> {}
 
 impl<'a> Taggable<'a> for TagsState<'a> {
     fn tag(&self, key: &str) -> Option<&'a str> {
-        // TODO: Remove Copy
         self.tags.get(key).copied()
     }
 }
@@ -64,7 +62,6 @@ impl<'a> PrefixState<'a> {
 
 impl<'a> Taggable<'a> for PrefixState<'a> {
     fn tag(&self, key: &str) -> Option<&'a str> {
-        // TODO: Remove Copy
         self.tags.get(key).copied()
     }
 }
@@ -89,7 +86,6 @@ impl<'a> CommandState<'a> {
 
 impl<'a> Taggable<'a> for CommandState<'a> {
     fn tag(&self, key: &str) -> Option<&'a str> {
-        // TODO: Remove Copy
         self.tags.get(key).copied()
     }
 }
