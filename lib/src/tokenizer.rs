@@ -1,3 +1,6 @@
+use crate::parsed::ParsedPrefix;
+use crate::Parsed;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -98,6 +101,67 @@ impl<'a> Tokenizer<'a, Start> {
                 state: PhantomData::default(),
             })
         }
+    }
+
+    pub fn into_parsed(self, mut cfg: PartialCfg<'a>) -> Result<Parsed<'a>, ParserError> {
+        let mut result = Parsed::default();
+
+        // Parse tags
+        let mut tokenizer = self.tags();
+        if !cfg.tags.is_empty() {
+            let mut tags = HashMap::with_capacity(cfg.tags.len());
+            while !cfg.tags.is_empty() {
+                match tokenizer.next() {
+                    Some(Ok((key, val))) => {
+                        if cfg.tags.remove(&key) {
+                            tags.insert(key, val);
+                        }
+                    }
+                    Some(Err(why)) => return Err(why),
+                    None => break,
+                }
+            }
+            result.tags = tags;
+        }
+
+        // Parse prefix
+        let mut tokenizer = tokenizer.prefix();
+        if let Some((name, user, host)) = cfg.prefix {
+            result.prefix = Some(ParsedPrefix(
+                if name { tokenizer.name()? } else { None },
+                if user { tokenizer.user()? } else { None },
+                if host { tokenizer.name()? } else { None },
+            ));
+        }
+
+        // Command
+        let mut tokenizer = tokenizer.command();
+        if cfg.command {
+            result.command = Some(tokenizer.command()?);
+        }
+
+        // Params
+        let mut tokenizer = tokenizer.params();
+        if !cfg.params.is_empty() {
+            let mut params = Vec::with_capacity(cfg.params.len());
+            cfg.params.dedup();
+            cfg.params.sort();
+            let mut position = 0;
+            for index in cfg.params {
+                let delta = index - position;
+                position = index;
+                params.push(tokenizer.nth(delta));
+            }
+            result.params = params;
+        }
+
+        // Trailing
+        let tokenizer = tokenizer.trailing();
+        if cfg.trailing {
+            result.trailing = tokenizer.trailing();
+        }
+
+        Ok(result)
     }
 
     pub fn tags(self) -> Tokenizer<'a, TagsState> {
@@ -382,6 +446,15 @@ impl std::fmt::Display for ParserError {
 }
 
 impl Error for ParserError {}
+
+#[derive(Default, Clone)]
+pub struct PartialCfg<'a> {
+    pub tags: HashSet<&'a str>,
+    pub prefix: Option<(bool, bool, bool)>,
+    pub command: bool,
+    pub params: Vec<usize>,
+    pub trailing: bool,
+}
 
 #[cfg(test)]
 mod tests {

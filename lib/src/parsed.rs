@@ -1,30 +1,19 @@
 use crate::params::Parameterized;
-use crate::prefix::Prefixed;
 use crate::tags::Taggable;
 use crate::{InvalidIrcFormatError, Message};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ParsedPrefix<'a>(pub &'a str, pub Option<&'a str>, pub Option<&'a str>);
-
-impl<'a> Prefixed<'a> for ParsedPrefix<'a> {
-    fn name(&self) -> &'a str {
-        self.0
-    }
-
-    fn user(&self) -> Option<&'a str> {
-        self.1
-    }
-
-    fn host(&self) -> Option<&'a str> {
-        self.2
-    }
-}
+pub struct ParsedPrefix<'a>(
+    pub Option<&'a str>,
+    pub Option<&'a str>,
+    pub Option<&'a str>,
+);
 
 impl<'a> From<(&'a str, Option<&'a str>, Option<&'a str>)> for ParsedPrefix<'a> {
     fn from((name, user, host): (&'a str, Option<&'a str>, Option<&'a str>)) -> Self {
-        Self(name, user, host)
+        Self(Some(name), user, host)
     }
 }
 
@@ -32,32 +21,16 @@ impl<'a> From<(&'a str, Option<&'a str>, Option<&'a str>)> for ParsedPrefix<'a> 
 /// zero-allocation this struct implements zero-copy parsing.
 ///
 /// Implements a partially or fully parsed message.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Parsed<'a> {
-    tags: HashMap<&'a str, &'a str>,
-    prefix: Option<ParsedPrefix<'a>>,
-    command: Option<&'a str>,
-    params: Vec<&'a str>,
-    trailing: Option<&'a str>,
+    pub(crate) tags: HashMap<&'a str, &'a str>,
+    pub(crate) prefix: Option<ParsedPrefix<'a>>,
+    pub(crate) command: Option<&'a str>,
+    pub(crate) params: Vec<Option<&'a str>>,
+    pub(crate) trailing: Option<&'a str>,
 }
 
 impl<'a> Parsed<'a> {
-    pub(crate) fn new(
-        tags: HashMap<&'a str, &'a str>,
-        prefix: Option<ParsedPrefix<'a>>,
-        command: Option<&'a str>,
-        params: Vec<&'a str>,
-        trailing: Option<&'a str>,
-    ) -> Self {
-        Self {
-            tags,
-            prefix,
-            command,
-            params,
-            trailing,
-        }
-    }
-
     pub fn command(&self) -> Option<&'a str> {
         self.command
     }
@@ -66,7 +39,7 @@ impl<'a> Parsed<'a> {
         self.prefix.as_ref()
     }
 
-    pub fn params(&self) -> impl Iterator<Item = &&'a str> {
+    pub fn params(&self) -> impl Iterator<Item = &Option<&'a str>> {
         self.params.iter()
     }
 
@@ -83,7 +56,10 @@ impl<'a> Taggable<'a> for Parsed<'a> {
 
 impl<'a> Parameterized<'a> for Parsed<'a> {
     fn param(&self, index: usize) -> Option<&'a str> {
-        self.params.get(index).copied()
+        match self.params.get(index) {
+            Some(Some(st)) => Some(*st),
+            _ => None,
+        }
     }
 
     fn trailing(&self) -> Option<&'a str> {
@@ -105,7 +81,7 @@ impl<'a> TryFrom<&'a Message> for Parsed<'a> {
         let (params, trailing) = value
             .params()
             .map(|param| param.into_parts())
-            .map(|(params, trailing)| (params.collect::<Vec<_>>(), trailing))
+            .map(|(params, trailing)| (params.map(Some).collect::<Vec<_>>(), trailing))
             .unwrap_or_default();
 
         Ok(Self {
@@ -121,7 +97,6 @@ impl<'a> TryFrom<&'a Message> for Parsed<'a> {
 #[cfg(test)]
 mod tests {
     use crate::params::Parameterized;
-    use crate::prefix::Prefixed;
     use crate::tags::Taggable;
     use crate::{InvalidIrcFormatError, Message};
 
@@ -139,8 +114,8 @@ mod tests {
         assert_eq!(Some("value1"), parsed.tag("tag1"));
         assert_eq!(Some("value2"), parsed.tag("tag2"));
         assert_eq!(
-            Some(("name", Some("user"), Some("host"))),
-            parsed.prefix().map(|prefix| prefix.as_parts())
+            Some((Some("name"), Some("user"), Some("host"))),
+            parsed.prefix().map(|prefix| (prefix.0, prefix.1, prefix.2))
         );
         assert_eq!(Some("param0"), parsed.param(0));
         assert_eq!(Some("Trailing Parameter!"), parsed.trailing());

@@ -5,9 +5,9 @@ use crate::builder::Message as MessageBuilder;
 use crate::errors::InvalidIrcFormatError;
 use crate::params::Params;
 use crate::parsed::Parsed;
-use crate::partial::{Init, Partial};
 use crate::prefix::Prefix;
 use crate::tags::Tags;
+use crate::tokenizer::{ParserError, PartialCfg, Tokenizer};
 use std::convert::TryFrom;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
@@ -81,8 +81,8 @@ impl Message {
     }
 
     /// Returns a query instance to partially parse the message.
-    pub fn partial(&self) -> Partial<Init> {
-        Partial::new(self)
+    pub fn partial<'a>(&'a self, cfg: PartialCfg<'a>) -> Result<Parsed<'a>, ParserError> {
+        Tokenizer::new(self.raw.as_str())?.into_parsed(cfg)
     }
 
     /// Creates a message builder as alternative to building an irc string before creating the message.

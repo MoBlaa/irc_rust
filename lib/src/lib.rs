@@ -67,7 +67,6 @@ mod errors;
 mod message;
 mod params;
 mod parsed;
-mod partial;
 mod prefix;
 mod tags;
 mod tokenizer;

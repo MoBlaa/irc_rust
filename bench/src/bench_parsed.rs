@@ -2,7 +2,7 @@ extern crate rand;
 extern crate test;
 
 use self::rand::Rng;
-use irc_rust::{InvalidIrcFormatError, Message, Parameterized, Parsed, Prefixed, Taggable};
+use irc_rust::{InvalidIrcFormatError, Message, Parameterized, Parsed, Taggable};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use test::Bencher;
@@ -43,17 +43,16 @@ fn bench_full_parsed(b: &mut Bencher) {
 
         let prefix = parsed.prefix();
         assert!(prefix.is_some());
-        let (name, user, host) = prefix.unwrap().as_parts();
-        assert_eq!(name, "name");
-        assert!(user.is_some());
-        assert_eq!(user.unwrap(), "user");
-        assert_eq!(host.unwrap(), "host");
+        let prefix = prefix.unwrap();
+        assert_eq!(prefix.0, Some("name"));
+        assert_eq!(prefix.1, Some("user"));
+        assert_eq!(prefix.2, Some("host"));
 
         assert_eq!(parsed.command(), Some("CMD"));
 
         let mut iter = parsed.params();
-        assert_eq!(iter.next().unwrap(), &"param1");
-        assert_eq!(iter.next().unwrap(), &"param2");
+        assert_eq!(iter.next().unwrap(), &Some("param1"));
+        assert_eq!(iter.next().unwrap(), &Some("param2"));
         assert!(iter.next().is_none());
         let trailing = parsed.trailing();
         assert!(trailing.is_some());
@@ -131,7 +130,7 @@ fn bench_params_iter(b: &mut Bencher) {
 
     b.iter(|| {
         for param in parsed.params() {
-            assert_eq!(param, &"param")
+            assert_eq!(param, &Some("param"))
         }
     });
 }
