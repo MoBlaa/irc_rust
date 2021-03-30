@@ -69,7 +69,7 @@ mod params;
 mod parsed;
 mod prefix;
 mod tags;
-mod tokenizer;
+pub mod tokenizer;
 
 #[cfg(test)]
 mod test;
