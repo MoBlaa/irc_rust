@@ -72,9 +72,9 @@ impl<'a> TryFrom<&'a str> for Parsed<'a> {
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         let mut tokenizer = Tokenizer::new(value)?.tags();
-        let mut iter = tokenizer.as_iter();
+        let iter = tokenizer.as_iter();
         let mut tags = HashMap::new();
-        while let Some(res) = iter.next() {
+        for res in iter {
             let (key, value) = res?;
             tags.insert(key, value);
         }
