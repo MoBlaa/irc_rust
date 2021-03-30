@@ -5,6 +5,17 @@ use std::error::Error;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
+/// Implements a Parser of IRC Messages as described in [IRCv3](https://ircv3.net/irc/) and
+/// [RFC 1459](https://tools.ietf.org/html/rfc1459).
+///
+/// The tokenizer implements both phases of a parser: Lexical and syntactical analysis. This
+/// is required as it implements a __Zero-allocation__ parser which is not allocating anything
+/// on the heap and returns the next element based on its state.
+///
+/// Transitions between states are implemented with methods [Tokenizer::tags], [Tokenizer::prefix],
+/// [Tokenizer::command], [Tokenizer::params] and [Tokenizer::trailing]. Based on the state
+/// different parts of the message can be parsed. If some parts of the message are not
+/// needed they are skipped by calling the wanted state transition method.
 #[derive(Eq, PartialEq, Debug)]
 pub struct Tokenizer<'a, T: State> {
     raw: &'a str,
@@ -269,8 +280,8 @@ impl<'a> Tokenizer<'a, PrefixState> {
         if self.raw.starts_with('!') {
             let end = self
                 .raw
-                .find('@')
-                .ok_or(ParserError::PrefixUserWithoutHost)?;
+                .find(&['@', ' '][..])
+                .ok_or_else(|| ParserError::NoCommand)?;
             let split = self.raw.split_at(end);
             user = Some(&split.0[1..]);
             self.raw = split.1;
@@ -456,7 +467,6 @@ pub enum ParserError {
     NoTagValueEnd,
     NoCommand,
     PrefixWithoutName,
-    PrefixUserWithoutHost,
 }
 
 impl std::fmt::Display for ParserError {
@@ -466,9 +476,6 @@ impl std::fmt::Display for ParserError {
             ParserError::NoTagValueEnd => write!(f, "Tag Value has no ending ';' or ' '"),
             ParserError::NoCommand => write!(f, "Missing command in message"),
             ParserError::PrefixWithoutName => write!(f, "Prefix has to have name included"),
-            ParserError::PrefixUserWithoutHost => {
-                write!(f, "Prefix user is not allowed without host")
-            }
         }
     }
 }
@@ -589,7 +596,13 @@ mod tests {
         let mut iter = tokenizer.as_iter();
         assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
-        assert_eq!(Err(ParserError::PrefixUserWithoutHost), tokenizer.parts());
+        assert_eq!(Some(("name", Some("user"), None)), tokenizer.parts()?);
+        let mut tokenizer = tokenizer.command();
+        assert_eq!("CMD", tokenizer.command()?);
+        let mut tokenizer = tokenizer.params();
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
+        assert_eq!(None, tokenizer.trailing().trailing());
 
         Ok(())
     }
