@@ -1,6 +1,6 @@
 use crate::params::Parameterized;
 use crate::tags::Taggable;
-use crate::{InvalidIrcFormatError, Message};
+use crate::tokenizer::{ParserError, Tokenizer};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
@@ -67,27 +67,31 @@ impl<'a> Parameterized<'a> for Parsed<'a> {
     }
 }
 
-impl<'a> TryFrom<&'a Message> for Parsed<'a> {
-    type Error = InvalidIrcFormatError;
+impl<'a> TryFrom<&'a str> for Parsed<'a> {
+    type Error = ParserError;
 
-    fn try_from(value: &'a Message) -> Result<Self, Self::Error> {
-        let tags = value
-            .tags()?
-            .map(|tags| tags.iter().collect::<HashMap<_, _>>())
-            .unwrap_or_default();
-
-        let prefix = value.prefix()?.map(|prefix| prefix.into_parts().into());
-
-        let (params, trailing) = value
-            .params()
-            .map(|param| param.into_parts())
-            .map(|(params, trailing)| (params.map(Some).collect::<Vec<_>>(), trailing))
-            .unwrap_or_default();
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        let mut tokenizer = Tokenizer::new(value)?.tags();
+        let mut iter = tokenizer.as_iter();
+        let mut tags = HashMap::new();
+        while let Some(res) = iter.next() {
+            let (key, value) = res?;
+            tags.insert(key, value);
+        }
+        let mut tokenizer = tokenizer.prefix();
+        let prefix = tokenizer
+            .parts()?
+            .map(|(name, user, host)| ParsedPrefix(Some(name), user, host));
+        let mut tokenizer = tokenizer.command();
+        let command = tokenizer.command()?;
+        let mut tokenizer = tokenizer.params();
+        let params = tokenizer.as_iter().map(Some).collect::<Vec<_>>();
+        let trailing = tokenizer.trailing().trailing();
 
         Ok(Self {
             tags,
             prefix,
-            command: Some(value.command()),
+            command: Some(command),
             params,
             trailing,
         })
@@ -98,10 +102,11 @@ impl<'a> TryFrom<&'a Message> for Parsed<'a> {
 mod tests {
     use crate::params::Parameterized;
     use crate::tags::Taggable;
-    use crate::{InvalidIrcFormatError, Message};
+    use crate::Message;
+    use std::error::Error;
 
     #[test]
-    fn test_parsed() -> Result<(), InvalidIrcFormatError> {
+    fn test_parsed() -> Result<(), Box<dyn Error>> {
         let message = Message::builder("CMD")
             .tag("tag1", "value1")
             .tag("tag2", "value2")

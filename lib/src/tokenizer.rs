@@ -110,8 +110,9 @@ impl<'a> Tokenizer<'a, Start> {
         let mut tokenizer = self.tags();
         if !cfg.tags.is_empty() {
             let mut tags = HashMap::with_capacity(cfg.tags.len());
+            let mut iter = tokenizer.as_iter();
             while !cfg.tags.is_empty() {
-                match tokenizer.next() {
+                match iter.next() {
                     Some(Ok((key, val))) => {
                         if cfg.tags.remove(&key) {
                             tags.insert(key, val);
@@ -144,13 +145,14 @@ impl<'a> Tokenizer<'a, Start> {
         let mut tokenizer = tokenizer.params();
         if !cfg.params.is_empty() {
             let mut params = Vec::with_capacity(cfg.params.len());
+            let mut iter = tokenizer.as_iter();
             cfg.params.dedup();
             cfg.params.sort_unstable();
             let mut position = 0;
             for index in cfg.params {
                 let delta = index - position;
                 position = index;
-                params.push(tokenizer.nth(delta));
+                params.push(iter.nth(delta));
             }
             result.params = params;
         }
@@ -205,6 +207,10 @@ impl<'a> Tokenizer<'a, Start> {
 }
 
 impl<'a> Tokenizer<'a, TagsState> {
+    pub fn as_iter<'b>(&'b mut self) -> IntoTagsIter<'b, 'a> {
+        IntoTagsIter(self)
+    }
+
     pub fn prefix(mut self) -> Tokenizer<'a, PrefixState> {
         self.skip_tags();
         Tokenizer {
@@ -284,7 +290,7 @@ impl<'a> Tokenizer<'a, PrefixState> {
     }
 
     /// Returns [None] if the prefix is badly formatted or no prefix is present.
-    pub fn parts(&mut self) -> Result<Option<Prefix>, ParserError> {
+    pub fn parts(&mut self) -> Result<Option<Prefix<'a>>, ParserError> {
         if let Some(raw) = self.raw.strip_prefix(' ') {
             self.raw = raw;
         }
@@ -364,23 +370,30 @@ impl<'a> Tokenizer<'a, ParamsState> {
             state: PhantomData::default(),
         }
     }
+
+    pub fn as_iter<'b>(&'b mut self) -> IntoParamsIter<'b, 'a> {
+        IntoParamsIter(self)
+    }
 }
 
-impl<'a> Iterator for Tokenizer<'a, ParamsState> {
+pub struct IntoParamsIter<'a, 'b>(&'a mut Tokenizer<'b, ParamsState>);
+
+impl<'a, 'b> Iterator for IntoParamsIter<'b, 'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.raw.starts_with(' ') || self.raw.starts_with(" :") {
+        if !self.0.raw.starts_with(' ') || self.0.raw.starts_with(" :") {
             return None;
         }
-        self.raw = &self.raw[1..];
+        self.0.raw = &self.0.raw[1..];
         let end = self
+            .0
             .raw
             .find(' ')
-            .or_else(|| self.raw.find(" :"))
-            .unwrap_or_else(|| self.raw.len());
-        let (param, rest) = self.raw.split_at(end);
-        self.raw = rest;
+            .or_else(|| self.0.raw.find(" :"))
+            .unwrap_or_else(|| self.0.raw.len());
+        let (param, rest) = self.0.raw.split_at(end);
+        self.0.raw = rest;
         Some(param)
     }
 }
@@ -395,26 +408,41 @@ impl<'a> Tokenizer<'a, TrailingState> {
     }
 }
 
-impl<'a> Iterator for Tokenizer<'a, TagsState> {
+pub struct IntoTagsIter<'a, 'b>(&'a mut Tokenizer<'b, TagsState>);
+
+impl<'a, 'b> Iterator for IntoTagsIter<'b, 'a> {
     type Item = Result<(&'a str, &'a str), ParserError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match &self.raw[..1] {
+        match &self.0.raw[..1] {
             "@" | ";" => {
                 let key_start = 1;
-                let key_end = self.raw[key_start..].find(&['='][..]);
+                let key_end = self.0.raw[key_start..].find(&['='][..]);
                 if key_end.is_none() {
+                    // Skip to next entry
+                    self.0.raw = &self.0.raw[1..];
+                    let end = self
+                        .0
+                        .raw
+                        .find(&[' ', ';'][..])
+                        .unwrap_or_else(|| self.0.raw.len());
+                    self.0.raw = &self.0.raw[end..];
                     return Some(Err(ParserError::NoTagKeyEnd));
                 }
                 let key_end = key_start + key_end.unwrap();
                 let val_start = key_end + 1;
-                let val_end = self.raw[val_start..].find(&[';', ' '][..]);
+                let val_end = self.0.raw[val_start..].find(&[';', ' '][..]);
                 if val_end.is_none() {
+                    // Skip till the end as only tags seem to be present
+                    self.0.raw = &self.0.raw[self.0.raw.len()..];
                     return Some(Err(ParserError::NoTagValueEnd));
                 }
                 let val_end = val_start + val_end.unwrap();
-                let key_val = (&self.raw[key_start..key_end], &self.raw[val_start..val_end]);
-                self.raw = &self.raw[val_end..];
+                let key_val = (
+                    &self.0.raw[key_start..key_end],
+                    &self.0.raw[val_start..val_end],
+                );
+                self.0.raw = &self.0.raw[val_end..];
                 Some(Ok(key_val))
             }
             _ => None,
@@ -469,13 +497,13 @@ mod tests {
     #[test]
     fn test_command_only() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new("CMD")?.tags();
-        assert_eq!(None, tokenizer.next());
+        assert_eq!(None, tokenizer.as_iter().next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
         assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
-        assert_eq!(None, tokenizer.next());
+        assert_eq!(None, tokenizer.as_iter().next());
         assert_eq!(None, tokenizer.trailing().trailing());
 
         Ok(())
@@ -484,14 +512,16 @@ mod tests {
     #[test]
     fn test_tag() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new("@key1=value1 CMD")?.tags();
-        assert_eq!(Some(Ok(("key1", "value1"))), tokenizer.next());
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(Some(Ok(("key1", "value1"))), iter.next());
+        assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
         assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         assert_eq!(None, tokenizer.trailing().trailing());
 
         Ok(())
@@ -500,15 +530,17 @@ mod tests {
     #[test]
     fn test_tags() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new("@key1=value1;key2=value2 CMD")?.tags();
-        assert_eq!(Some(Ok(("key1", "value1"))), tokenizer.next());
-        assert_eq!(Some(Ok(("key2", "value2"))), tokenizer.next());
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(Some(Ok(("key1", "value1"))), iter.next());
+        assert_eq!(Some(Ok(("key2", "value2"))), iter.next());
+        assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
         assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         assert_eq!(None, tokenizer.trailing().trailing());
 
         Ok(())
@@ -517,7 +549,8 @@ mod tests {
     #[test]
     fn test_prefix() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new(":name!user@host CMD")?.tags();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(
             Some(("name", Some("user"), Some("host"))),
@@ -526,7 +559,8 @@ mod tests {
         let mut tokenizer = tokenizer.command();
         assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         assert_eq!(None, tokenizer.trailing().trailing());
 
         Ok(())
@@ -535,13 +569,15 @@ mod tests {
     #[test]
     fn test_prefix_name() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new(":name CMD")?.tags();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(Some(("name", None, None)), tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
         assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         assert_eq!(None, tokenizer.trailing().trailing());
 
         Ok(())
@@ -550,7 +586,8 @@ mod tests {
     #[test]
     fn test_prefix_user() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new(":name!user CMD")?.tags();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(Err(ParserError::PrefixUserWithoutHost), tokenizer.parts());
 
@@ -560,13 +597,15 @@ mod tests {
     #[test]
     fn test_prefix_host() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new(":name@host CMD")?.tags();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(Some(("name", None, Some("host"))), tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
         assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         assert_eq!(None, tokenizer.trailing().trailing());
 
         Ok(())
@@ -575,15 +614,17 @@ mod tests {
     #[test]
     fn test_params() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new("CMD param0 param1")?.tags();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
         assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
-        assert_eq!(Some("param0"), tokenizer.next());
-        assert_eq!(Some("param1"), tokenizer.next());
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(Some("param0"), iter.next());
+        assert_eq!(Some("param1"), iter.next());
+        assert_eq!(None, iter.next());
         assert_eq!(None, tokenizer.trailing().trailing());
 
         Ok(())
@@ -592,15 +633,17 @@ mod tests {
     #[test]
     fn test_params_trailing() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new("CMD param0 param1 :Trailing parameter!")?.tags();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
         assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
-        assert_eq!(Some("param0"), tokenizer.next());
-        assert_eq!(Some("param1"), tokenizer.next());
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(Some("param0"), iter.next());
+        assert_eq!(Some("param1"), iter.next());
+        assert_eq!(None, iter.next());
         assert_eq!(Some("Trailing parameter!"), tokenizer.trailing().trailing());
 
         Ok(())
@@ -609,13 +652,15 @@ mod tests {
     #[test]
     fn test_trailing() -> Result<(), Box<dyn Error>> {
         let mut tokenizer = Tokenizer::new("CMD :Trailing parameter!")?.tags();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(None, tokenizer.parts()?);
         let mut tokenizer = tokenizer.command();
         assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
-        assert_eq!(None, tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(None, iter.next());
         assert_eq!(Some("Trailing parameter!"), tokenizer.trailing().trailing());
 
         Ok(())
@@ -627,8 +672,9 @@ mod tests {
             "@key1=value1;key2=value2 :name!user@host CMD param0 param1 :Trailing parameter!@:=;",
         )?
         .tags();
-        assert_eq!(Some(Ok(("key1", "value1"))), tokenizer.next());
-        assert_eq!(Some(Ok(("key2", "value2"))), tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(Some(Ok(("key1", "value1"))), iter.next());
+        assert_eq!(Some(Ok(("key2", "value2"))), iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(
             Some(("name", Some("user"), Some("host"))),
@@ -637,8 +683,9 @@ mod tests {
         let mut tokenizer = tokenizer.command();
         assert_eq!("CMD", tokenizer.command()?);
         let mut tokenizer = tokenizer.params();
-        assert_eq!(Some("param0"), tokenizer.next());
-        assert_eq!(Some("param1"), tokenizer.next());
+        let mut iter = tokenizer.as_iter();
+        assert_eq!(Some("param0"), iter.next());
+        assert_eq!(Some("param1"), iter.next());
         assert_eq!(
             Some("Trailing parameter!@:=;"),
             tokenizer.trailing().trailing()

@@ -91,9 +91,9 @@ fn bench_tag_create(b: &mut Bencher) {
 #[bench]
 fn bench_tag_get(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
     let mut str = String::from("");
-    for i in 0..1000 {
+    for i in 0..100 {
         str = format!("{}key{}=value{}", str, i, i);
-        if i != 1000 {
+        if i < 100 - 1 {
             str.push(';');
         }
     }
@@ -101,9 +101,10 @@ fn bench_tag_get(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
 
     b.iter(|| {
         let mut rng = rand::thread_rng();
-        let ikey = rng.gen_range(0, 1000);
+        let ikey = rng.gen_range(0, 100);
         let skey = format!("key{}", ikey);
         let val = tags.get(&skey);
+        assert!(val.is_some(), "{:?}", val);
         assert_eq!(val.unwrap(), format!("value{}", ikey));
     });
 

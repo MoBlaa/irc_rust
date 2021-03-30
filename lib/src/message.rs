@@ -76,8 +76,8 @@ pub struct Message {
 
 impl Message {
     /// Returns a fully parsed but zero-copy struct referencing the struct.
-    pub fn parsed(&self) -> Result<Parsed, InvalidIrcFormatError> {
-        Parsed::try_from(self)
+    pub fn parsed(&self) -> Result<Parsed, ParserError> {
+        Parsed::try_from(self.raw.as_str())
     }
 
     /// Returns a query instance to partially parse the message.

@@ -2,9 +2,10 @@ extern crate rand;
 extern crate test;
 
 use self::rand::Rng;
-use irc_rust::{InvalidIrcFormatError, Message, Parameterized, Parsed, Taggable};
+use irc_rust::{Message, Parameterized, Parsed, Taggable};
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::error::Error;
 use test::Bencher;
 
 #[bench]
@@ -61,21 +62,20 @@ fn bench_full_parsed(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_tag_get(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
+fn bench_tag_get(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
     let mut str = String::from("@");
-    for i in 0..1000 {
+    for i in 0..100 {
         str = format!("{}key{}=value{}", str, i, i);
-        if i != 1000 {
+        if i < 100 - 1 {
             str.push(';');
         }
     }
     str.push_str(" CMD");
-    let message = Message::from(str);
-    let parsed = Parsed::try_from(&message)?;
+    let parsed = Parsed::try_from(str.as_str())?;
 
     b.iter(|| {
         let mut rng = rand::thread_rng();
-        let ikey = rng.gen_range(0, 1000);
+        let ikey = rng.gen_range(0, 100);
         let skey = format!("key{}", ikey);
         let val = parsed.tag(&skey.as_str());
         assert!(val.is_some(), "No value for key '{}'", skey);
@@ -86,7 +86,7 @@ fn bench_tag_get(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
 }
 
 #[bench]
-fn bench_tags_iter_100(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
+fn bench_tags_iter_100(b: &mut Bencher) -> Result<(), Box<dyn Error>> {
     let mut str = String::from("");
     let mut key_values = HashMap::new();
     for i in 0..100 {
@@ -100,8 +100,7 @@ fn bench_tags_iter_100(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
         }
     }
     str.push_str(" CMD");
-    let message = Message::from(str);
-    let parsed = Parsed::try_from(&message)?;
+    let parsed = Parsed::try_from(str.as_str())?;
 
     b.iter(|| {
         for (key, value) in parsed.tags() {
@@ -110,7 +109,7 @@ fn bench_tags_iter_100(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
                 stored.is_some(),
                 "No value for key '{}' found in '{}'",
                 key,
-                message
+                str
             );
             assert_eq!(stored.unwrap(), value);
         }
