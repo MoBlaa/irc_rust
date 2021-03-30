@@ -281,7 +281,7 @@ impl<'a> Tokenizer<'a, PrefixState> {
             let end = self
                 .raw
                 .find(&['@', ' '][..])
-                .ok_or_else(|| ParserError::NoCommand)?;
+                .ok_or(ParserError::NoCommand)?;
             let split = self.raw.split_at(end);
             user = Some(&split.0[1..]);
             self.raw = split.1;
