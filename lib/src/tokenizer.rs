@@ -291,8 +291,8 @@ impl<'a> Tokenizer<'a, PrefixState> {
 
     /// Returns [None] if the prefix is badly formatted or no prefix is present.
     pub fn parts(&mut self) -> Result<Option<Prefix<'a>>, ParserError> {
-        if let Some(raw) = self.raw.strip_prefix(' ') {
-            self.raw = raw;
+        if self.raw.starts_with(' ') {
+            self.raw = &self.raw[1..];
         }
         if !self.raw.starts_with(':') {
             return Ok(None);
