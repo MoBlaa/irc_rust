@@ -1,9 +1,9 @@
 use crate::params::Parameterized;
 use crate::tags::Taggable;
-use crate::tokenizer::{Tokenizer};
+use crate::tokenizer::Tokenizer;
+use crate::ParserError;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use crate::ParserError;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ParsedPrefix<'a>(

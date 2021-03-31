@@ -4,7 +4,7 @@ extern crate test;
 use rand::Rng;
 use test::Bencher;
 
-use irc_rust::{ParserError, Message, Parameterized, Params, Prefixed, Tags};
+use irc_rust::{Message, Parameterized, Params, ParserError, Prefixed, Tags};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
