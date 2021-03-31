@@ -77,6 +77,10 @@ impl<'a, S: State> Tokenizer<'a, S> {
         self.raw = &self.raw[end..];
     }
 
+    fn skip_to_end(&mut self) {
+        self.raw = &self.raw[self.raw.len()..];
+    }
+
     fn skip_tags(&mut self) {
         // include ';' to also skip if tags have been partially parsed
         if self.raw.starts_with(&['@', ';'][..]) {
@@ -428,24 +432,23 @@ impl<'a, 'b> Iterator for IntoTagsIter<'b, 'a> {
         match &self.0.raw[..1] {
             "@" | ";" => {
                 let key_start = 1;
-                let key_end = self.0.raw[key_start..].find(&['='][..]);
+                let key_end = self.0.raw[key_start..]
+                    .find(&['='][..])
+                    .map(|key_end| (key_end + key_start, key_end + key_start + 1))
+                    .or_else(|| {
+                        let key_end = key_start + self.0.raw[key_start..].find(&[' ', ';'][..])?;
+                        Some((key_end, key_end))
+                    });
                 if key_end.is_none() {
-                    // Skip to next entry
-                    self.0.raw = &self.0.raw[1..];
-                    let end = self
-                        .0
-                        .raw
-                        .find(&[' ', ';'][..])
-                        .unwrap_or_else(|| self.0.raw.len());
-                    self.0.raw = &self.0.raw[end..];
+                    // Skip till the end as only tags seem to be present
+                    self.0.skip_to_end();
                     return Some(Err(ParserError::NoTagKeyEnd));
                 }
-                let key_end = key_start + key_end.unwrap();
-                let val_start = key_end + 1;
+                let (key_end, val_start) = key_end.unwrap();
                 let val_end = self.0.raw[val_start..].find(&[';', ' '][..]);
                 if val_end.is_none() {
                     // Skip till the end as only tags seem to be present
-                    self.0.raw = &self.0.raw[self.0.raw.len()..];
+                    self.0.skip_to_end();
                     return Some(Err(ParserError::NoTagValueEnd));
                 }
                 let val_end = val_start + val_end.unwrap();
@@ -536,10 +539,13 @@ mod tests {
 
     #[test]
     fn test_tags() -> Result<(), Box<dyn Error>> {
-        let mut tokenizer = Tokenizer::new("@key1=value1;key2=value2 CMD")?.tags();
+        let mut tokenizer = Tokenizer::new("@key1=value1;key2=value2;key3=;key4;key5 CMD")?.tags();
         let mut iter = tokenizer.as_iter();
         assert_eq!(Some(Ok(("key1", "value1"))), iter.next());
         assert_eq!(Some(Ok(("key2", "value2"))), iter.next());
+        assert_eq!(Some(Ok(("key3", ""))), iter.next());
+        assert_eq!(Some(Ok(("key4", ""))), iter.next());
+        assert_eq!(Some(Ok(("key5", ""))), iter.next());
         assert_eq!(None, iter.next());
         let mut tokenizer = tokenizer.prefix();
         assert_eq!(None, tokenizer.parts()?);
