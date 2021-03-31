@@ -4,7 +4,7 @@ extern crate test;
 use rand::Rng;
 use test::Bencher;
 
-use irc_rust::{InvalidIrcFormatError, Message, Parameterized, Params, Prefixed, Tags};
+use irc_rust::{ParserError, Message, Parameterized, Params, Prefixed, Tags};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
@@ -89,7 +89,7 @@ fn bench_tag_create(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_tag_get(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
+fn bench_tag_get(b: &mut Bencher) -> Result<(), ParserError> {
     let mut str = String::from("");
     for i in 0..100 {
         str = format!("{}key{}=value{}", str, i, i);
@@ -112,7 +112,7 @@ fn bench_tag_get(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
 }
 
 #[bench]
-fn bench_tags_iter_100(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
+fn bench_tags_iter_100(b: &mut Bencher) -> Result<(), ParserError> {
     let mut str = String::from("");
     let mut key_values = HashMap::new();
     for i in 0..100 {

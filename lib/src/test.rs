@@ -1,7 +1,7 @@
 use crate::message::Message;
 use crate::params::Parameterized;
 use crate::prefix::Prefixed;
-use crate::InvalidIrcFormatError;
+use crate::ParserError;
 
 #[test]
 fn test_parse() {
@@ -182,7 +182,7 @@ fn test_prefix() {
 }
 
 #[test]
-fn test_message_builder() -> Result<(), InvalidIrcFormatError> {
+fn test_message_builder() -> Result<(), ParserError> {
     let message = Message::builder("CMD")
         .tag("key1", "value1")
         .tag("key2", "value2")

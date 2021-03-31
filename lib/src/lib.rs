@@ -75,7 +75,7 @@ pub mod tokenizer;
 mod test;
 
 pub use builder::Message as MessageBuilder;
-pub use errors::InvalidIrcFormatError;
+pub use errors::ParserError;
 pub use message::Message;
 pub use params::Parameterized;
 pub use params::Params;

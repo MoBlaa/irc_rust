@@ -1,23 +1,22 @@
-use core::fmt;
 use std::error::Error;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub enum InvalidIrcFormatError {
-    Tag(String),
-    NoTagEnd(String),
+#[derive(Debug, Eq, PartialEq)]
+pub enum ParserError {
+    NoTagKeyEnd,
+    NoTagValueEnd,
+    NoCommand,
+    PrefixWithoutName,
 }
 
-impl fmt::Display for InvalidIrcFormatError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for ParserError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            InvalidIrcFormatError::Tag(raw) => write!(f, "Invalid tags format: {}", raw),
-            InvalidIrcFormatError::NoTagEnd(raw_message) => write!(
-                f,
-                "No space to end the Tag found in message: {}",
-                raw_message
-            ),
+            ParserError::NoTagKeyEnd => write!(f, "Tag Key has no ending '='"),
+            ParserError::NoTagValueEnd => write!(f, "Tag Value has no ending ';' or ' '"),
+            ParserError::NoCommand => write!(f, "Missing command in message"),
+            ParserError::PrefixWithoutName => write!(f, "Prefix has to have name included"),
         }
     }
 }
 
-impl Error for InvalidIrcFormatError {}
+impl Error for ParserError {}

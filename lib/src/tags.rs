@@ -1,4 +1,4 @@
-use crate::errors::InvalidIrcFormatError;
+use crate::errors::ParserError;
 use core::fmt;
 use std::convert::TryFrom;
 
@@ -77,13 +77,13 @@ impl<'a> Taggable<'a> for Tags<'a> {
 }
 
 impl<'a> TryFrom<&'a str> for Tags<'a> {
-    type Error = InvalidIrcFormatError;
+    type Error = ParserError;
 
     fn try_from(raw: &'a str) -> Result<Self, Self::Error> {
         let raw = raw.trim_matches(&[' ', '@'][..]);
 
         if raw.contains(' ') {
-            return Err(InvalidIrcFormatError::Tag(raw.to_string()));
+            return Err(ParserError::NoTagValueEnd);
         }
 
         Ok(Tags { raw })
@@ -105,12 +105,12 @@ impl<'a> AsRef<str> for Tags<'a> {
 #[cfg(test)]
 mod tests {
     use crate::tags::Tags;
-    use crate::InvalidIrcFormatError;
+    use crate::ParserError;
     use std::collections::HashMap;
     use std::convert::TryFrom;
 
     #[test]
-    fn test_get_and_index() -> Result<(), InvalidIrcFormatError> {
+    fn test_get_and_index() -> Result<(), ParserError> {
         let tags = Tags::try_from("hello=world;whats=goes;hello2=world2")?;
         let get = tags.get("hello");
         assert_eq!(get, Some("world"));
@@ -122,7 +122,7 @@ mod tests {
     }
 
     #[test]
-    fn test_iter() -> Result<(), InvalidIrcFormatError> {
+    fn test_iter() -> Result<(), ParserError> {
         let mut map = HashMap::new();
         map.insert("hello", "world");
         map.insert("whats", "goes");

@@ -2,12 +2,12 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 
 use crate::builder::Message as MessageBuilder;
-use crate::errors::InvalidIrcFormatError;
+use crate::errors::ParserError;
 use crate::params::Params;
 use crate::parsed::Parsed;
 use crate::prefix::Prefix;
 use crate::tags::Tags;
-use crate::tokenizer::{ParserError, PartialCfg, Start, Tokenizer};
+use crate::tokenizer::{PartialCfg, Start, Tokenizer};
 use std::convert::TryFrom;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
@@ -96,7 +96,7 @@ impl Message {
 
     /// Creates a builder from this message. Only initializes fields already present in the message.
     /// By using this method a whole new Message will be created.
-    pub fn to_builder(&self) -> Result<MessageBuilder<'_>, InvalidIrcFormatError> {
+    pub fn to_builder(&self) -> Result<MessageBuilder<'_>, ParserError> {
         let mut builder = MessageBuilder::new(self.command());
         if let Some(tags) = self.tags()? {
             for (key, value) in tags.iter() {
@@ -122,13 +122,13 @@ impl Message {
     }
 
     /// Returns tags if any are present.
-    pub fn tags(&self) -> Result<Option<Tags>, InvalidIrcFormatError> {
+    pub fn tags(&self) -> Result<Option<Tags>, ParserError> {
         if self.raw.starts_with('@') {
             let end = self.raw.find(' ');
             if let Some(end) = end {
                 Tags::try_from(&self.raw[1..end]).map(Some)
             } else {
-                Err(InvalidIrcFormatError::NoTagEnd(self.raw.clone()))
+                Err(ParserError::NoTagValueEnd)
             }
         } else {
             Ok(None)
@@ -136,7 +136,7 @@ impl Message {
     }
 
     /// Returns the Prefix if present.
-    pub fn prefix(&self) -> Result<Option<Prefix>, InvalidIrcFormatError> {
+    pub fn prefix(&self) -> Result<Option<Prefix>, ParserError> {
         let offset = self
             .tags()
             // Set offset if tags exist
