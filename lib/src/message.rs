@@ -98,16 +98,13 @@ impl Message {
     pub fn to_builder(&self) -> Result<MessageBuilder<'_>, ParserError> {
         let parsed = Parsed::try_from(self.raw.as_str())?;
 
-        let mut builder =
-            MessageBuilder::new(parsed.command().ok_or_else(|| ParserError::NoCommand)?);
+        let mut builder = MessageBuilder::new(parsed.command().ok_or(ParserError::NoCommand)?);
         for (key, value) in parsed.tags() {
             builder = builder.tag(key, value)
         }
         if let Some(parsed) = parsed.prefix() {
             builder = builder.prefix(
-                parsed
-                    .name()
-                    .ok_or_else(|| ParserError::PrefixWithoutName)?,
+                parsed.name().ok_or(ParserError::PrefixWithoutName)?,
                 parsed.user(),
                 parsed.host(),
             );
