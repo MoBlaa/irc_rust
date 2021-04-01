@@ -15,7 +15,7 @@ use std::marker::PhantomData;
 /// [Tokenizer::command], [Tokenizer::params] and [Tokenizer::trailing]. Based on the state
 /// different parts of the message can be parsed. If some parts of the message are not
 /// needed they are skipped by calling the wanted state transition method.
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct Tokenizer<'a, T: State> {
     raw: &'a str,
     state: PhantomData<T>,
@@ -23,32 +23,32 @@ pub struct Tokenizer<'a, T: State> {
 
 pub trait State: PartialEq + Eq + Debug {}
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct Start;
 
 impl State for Start {}
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct TagsState;
 
 impl State for TagsState {}
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct PrefixState;
 
 impl State for PrefixState {}
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct CommandState;
 
 impl State for CommandState {}
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct ParamsState;
 
 impl State for ParamsState {}
 
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct TrailingState;
 
 impl State for TrailingState {}
@@ -221,8 +221,8 @@ impl<'a> Tokenizer<'a, Start> {
 }
 
 impl<'a> Tokenizer<'a, TagsState> {
-    pub fn as_iter<'b>(&'b mut self) -> IntoTagsIter<'b, 'a> {
-        IntoTagsIter(self)
+    pub fn as_iter(&mut self) -> IntoTagsIter<'a> {
+        IntoTagsIter(*self)
     }
 
     pub fn prefix(mut self) -> Tokenizer<'a, PrefixState> {
@@ -385,14 +385,23 @@ impl<'a> Tokenizer<'a, ParamsState> {
         }
     }
 
-    pub fn as_iter<'b>(&'b mut self) -> IntoParamsIter<'b, 'a> {
+    pub fn as_iter(&mut self) -> IntoParamsIter<'a> {
+        IntoParamsIter(*self)
+    }
+}
+
+impl<'a> IntoIterator for Tokenizer<'a, ParamsState> {
+    type Item = &'a str;
+    type IntoIter = IntoParamsIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
         IntoParamsIter(self)
     }
 }
 
-pub struct IntoParamsIter<'a, 'b>(&'a mut Tokenizer<'b, ParamsState>);
+pub struct IntoParamsIter<'a>(Tokenizer<'a, ParamsState>);
 
-impl<'a, 'b> Iterator for IntoParamsIter<'b, 'a> {
+impl<'a> Iterator for IntoParamsIter<'a> {
     type Item = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -422,9 +431,18 @@ impl<'a> Tokenizer<'a, TrailingState> {
     }
 }
 
-pub struct IntoTagsIter<'a, 'b>(&'a mut Tokenizer<'b, TagsState>);
+impl<'a> IntoIterator for Tokenizer<'a, TagsState> {
+    type Item = Result<(&'a str, &'a str), ParserError>;
+    type IntoIter = IntoTagsIter<'a>;
 
-impl<'a, 'b> Iterator for IntoTagsIter<'b, 'a> {
+    fn into_iter(self) -> Self::IntoIter {
+        IntoTagsIter(self)
+    }
+}
+
+pub struct IntoTagsIter<'a>(Tokenizer<'a, TagsState>);
+
+impl<'a> Iterator for IntoTagsIter<'a> {
     type Item = Result<(&'a str, &'a str), ParserError>;
 
     fn next(&mut self) -> Option<Self::Item> {
