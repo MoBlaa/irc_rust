@@ -24,8 +24,10 @@ fn test_parse() -> Result<(), Box<dyn Error>> {
     let mut tags = parsed.tags();
     let (key, val) = tags.next().unwrap();
     let (key2, val2) = tags.next().unwrap();
-    assert!((*key == "key1" && *val == "value1" && *key2 == "key2" && *val2 == "value2")
-        || (*key2 == "key1" && *val2 == "value1" && *key == "key2" && *val == "value2"));
+    assert!(
+        (*key == "key1" && *val == "value1" && *key2 == "key2" && *val2 == "value2")
+            || (*key2 == "key1" && *val2 == "value1" && *key == "key2" && *val == "value2")
+    );
 
     let (name, user, host) = message.prefix()?.unwrap();
     assert_eq!(name, "name");
