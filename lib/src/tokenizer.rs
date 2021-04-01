@@ -54,7 +54,7 @@ pub struct TrailingState;
 impl State for TrailingState {}
 
 impl<'a, S: State> Tokenizer<'a, S> {
-    fn skip_until_char(&mut self, ch: char) {
+    fn skip_until_char(&mut self, ch: char, skip_char: bool) {
         if self.raw.starts_with(ch) {
             return;
         }
@@ -62,7 +62,7 @@ impl<'a, S: State> Tokenizer<'a, S> {
         let end = self
             .raw
             .find(ch)
-            .map(|space_pos| space_pos + 1)
+            .map(|space_pos| if skip_char { space_pos + 1 } else { space_pos })
             .unwrap_or_else(|| self.raw.len());
         self.raw = &self.raw[end..];
     }
@@ -83,20 +83,20 @@ impl<'a, S: State> Tokenizer<'a, S> {
     fn skip_tags(&mut self) {
         // include ';' to also skip if tags have been partially parsed
         if self.raw.starts_with(&['@', ';'][..]) {
-            self.skip_until_char(' ');
+            self.skip_until_char(' ', true);
         }
     }
 
     fn skip_prefix(&mut self) {
         self.skip_tags();
         if self.raw.starts_with(&[':', '!', '@'][..]) {
-            self.skip_until_char(' ');
+            self.skip_until_char(' ', true);
         }
     }
 
     fn skip_command(&mut self) {
         self.skip_prefix();
-        self.skip_until_char(' ');
+        self.skip_until_char(' ', false);
     }
 
     fn skip_params(&mut self) {

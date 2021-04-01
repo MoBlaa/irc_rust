@@ -173,7 +173,8 @@ fn test_prefix() -> Result<(), Box<dyn Error>> {
 
     assert_eq!(message.command()?, "CMD");
 
-    assert!(message.params()?.next().is_none());
+    let next_param = message.params()?.next();
+    assert!(next_param.is_none(), "{:?}", next_param);
 
     let message = Message::from(":name@host CMD");
 
