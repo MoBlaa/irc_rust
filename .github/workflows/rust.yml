@@ -153,7 +153,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-features --no-fail-fast
+          args: --all-features --no-fail-fast --package irc-rust
         env:
           CARGO_INCREMENTAL: 0
           # '-Cpanic=abort -Zpanic_abort_tests' fails if benchmarks are part of tests
