@@ -62,25 +62,16 @@
 #[macro_use]
 extern crate serde;
 
-mod builder;
-mod errors;
-mod message;
-mod params;
-mod parsed;
-mod prefix;
-mod tags;
+pub mod builder;
+pub mod errors;
+pub mod message;
+pub mod params;
+pub mod parsed;
+pub mod prefix;
+pub mod tags;
 pub mod tokenizer;
 
 #[cfg(test)]
 mod test;
 
-pub use builder::Message as MessageBuilder;
-pub use errors::ParserError;
 pub use message::Message;
-pub use params::Parameterized;
-pub use params::Params;
-pub use parsed::Parsed;
-pub use prefix::Prefix;
-pub use prefix::Prefixed;
-pub use tags::Taggable;
-pub use tags::Tags;

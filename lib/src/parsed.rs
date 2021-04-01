@@ -1,20 +1,30 @@
+use crate::errors::ParserError;
 use crate::params::Parameterized;
 use crate::tags::Taggable;
 use crate::tokenizer::Tokenizer;
-use crate::ParserError;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ParsedPrefix<'a>(
-    pub Option<&'a str>,
-    pub Option<&'a str>,
-    pub Option<&'a str>,
-);
+pub struct ParsedPrefix<'a>(Option<&'a str>, Option<&'a str>, Option<&'a str>);
 
-impl<'a> From<(&'a str, Option<&'a str>, Option<&'a str>)> for ParsedPrefix<'a> {
-    fn from((name, user, host): (&'a str, Option<&'a str>, Option<&'a str>)) -> Self {
-        Self(Some(name), user, host)
+impl<'a> ParsedPrefix<'a> {
+    pub fn name(&self) -> Option<&'a str> {
+        self.0
+    }
+
+    pub fn user(&self) -> Option<&'a str> {
+        self.1
+    }
+
+    pub fn host(&self) -> Option<&'a str> {
+        self.2
+    }
+}
+
+impl<'a> From<(Option<&'a str>, Option<&'a str>, Option<&'a str>)> for ParsedPrefix<'a> {
+    fn from((name, user, host): (Option<&'a str>, Option<&'a str>, Option<&'a str>)) -> Self {
+        Self(name, user, host)
     }
 }
 
@@ -24,14 +34,30 @@ impl<'a> From<(&'a str, Option<&'a str>, Option<&'a str>)> for ParsedPrefix<'a> 
 /// Implements a partially or fully parsed message.
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Parsed<'a> {
-    pub(crate) tags: HashMap<&'a str, &'a str>,
-    pub(crate) prefix: Option<ParsedPrefix<'a>>,
-    pub(crate) command: Option<&'a str>,
-    pub(crate) params: Vec<Option<&'a str>>,
-    pub(crate) trailing: Option<&'a str>,
+    tags: HashMap<&'a str, &'a str>,
+    prefix: Option<ParsedPrefix<'a>>,
+    command: Option<&'a str>,
+    params: Vec<Option<&'a str>>,
+    trailing: Option<&'a str>,
 }
 
 impl<'a> Parsed<'a> {
+    pub(crate) fn new(
+        tags: HashMap<&'a str, &'a str>,
+        prefix: Option<ParsedPrefix<'a>>,
+        command: Option<&'a str>,
+        params: Vec<Option<&'a str>>,
+        trailing: Option<&'a str>,
+    ) -> Self {
+        Self {
+            tags,
+            prefix,
+            command,
+            params,
+            trailing,
+        }
+    }
+
     pub fn command(&self) -> Option<&'a str> {
         self.command
     }

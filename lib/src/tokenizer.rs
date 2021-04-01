@@ -1,5 +1,5 @@
-use crate::parsed::ParsedPrefix;
-use crate::{Parsed, ParserError};
+use crate::errors::ParserError;
+use crate::parsed::{Parsed, ParsedPrefix};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -118,7 +118,11 @@ impl<'a> Tokenizer<'a, Start> {
     }
 
     pub fn into_parsed(self, mut cfg: PartialCfg<'a>) -> Result<Parsed<'a>, ParserError> {
-        let mut result = Parsed::default();
+        let mut result_tags = HashMap::new();
+        let mut result_prefix = None;
+        let mut result_command = None;
+        let mut result_params = Vec::new();
+        let mut result_trailing = None;
 
         // Parse tags
         let mut tokenizer = self.tags();
@@ -136,23 +140,23 @@ impl<'a> Tokenizer<'a, Start> {
                     None => break,
                 }
             }
-            result.tags = tags;
+            result_tags = tags;
         }
 
         // Parse prefix
         let mut tokenizer = tokenizer.prefix();
         if let Some((name, user, host)) = cfg.prefix {
-            result.prefix = Some(ParsedPrefix(
+            result_prefix = Some(ParsedPrefix::from((
                 if name { tokenizer.name()? } else { None },
                 if user { tokenizer.user()? } else { None },
                 if host { tokenizer.name()? } else { None },
-            ));
+            )));
         }
 
         // Command
         let mut tokenizer = tokenizer.command();
         if cfg.command {
-            result.command = Some(tokenizer.command()?);
+            result_command = Some(tokenizer.command()?);
         }
 
         // Params
@@ -168,16 +172,22 @@ impl<'a> Tokenizer<'a, Start> {
                 position = index;
                 params.push(iter.nth(delta));
             }
-            result.params = params;
+            result_params = params;
         }
 
         // Trailing
         let tokenizer = tokenizer.trailing();
         if cfg.trailing {
-            result.trailing = tokenizer.trailing();
+            result_trailing = tokenizer.trailing();
         }
 
-        Ok(result)
+        Ok(Parsed::new(
+            result_tags,
+            result_prefix,
+            result_command,
+            result_params,
+            result_trailing,
+        ))
     }
 
     pub fn tags(self) -> Tokenizer<'a, TagsState> {

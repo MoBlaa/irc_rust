@@ -3,11 +3,9 @@ use std::fmt::{Display, Formatter};
 
 use crate::builder::Message as MessageBuilder;
 use crate::errors::ParserError;
-use crate::params::Params;
+use crate::params::Parameterized;
 use crate::parsed::Parsed;
-use crate::prefix::Prefix;
-use crate::tags::Tags;
-use crate::tokenizer::{PartialCfg, Start, Tokenizer};
+use crate::tokenizer::{PartialCfg, Prefix, Start, Tokenizer};
 use std::convert::TryFrom;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
@@ -97,98 +95,58 @@ impl Message {
     /// Creates a builder from this message. Only initializes fields already present in the message.
     /// By using this method a whole new Message will be created.
     pub fn to_builder(&self) -> Result<MessageBuilder<'_>, ParserError> {
-        let mut builder = MessageBuilder::new(self.command());
-        if let Some(tags) = self.tags()? {
-            for (key, value) in tags.iter() {
-                builder = builder.tag(key, value)
-            }
+        let parsed = Parsed::try_from(self.raw.as_str())?;
+
+        let mut builder =
+            MessageBuilder::new(parsed.command().ok_or_else(|| ParserError::NoCommand)?);
+        for (key, value) in parsed.tags() {
+            builder = builder.tag(key, value)
         }
-        if let Some(prefix) = self.prefix()? {
-            let (name, user, host) = prefix.into_parts();
-            builder = builder.prefix(name, user, host);
+        if let Some(parsed) = parsed.prefix() {
+            builder = builder.prefix(
+                parsed
+                    .name()
+                    .ok_or_else(|| ParserError::PrefixWithoutName)?,
+                parsed.user(),
+                parsed.host(),
+            );
         }
-        builder = builder.command(self.command());
-        if let Some(params) = self.params() {
-            let (params, trailing) = params.into_parts();
-            if let Some(trailing) = trailing {
-                builder = builder.trailing(trailing);
-            }
-            for param in params {
-                builder = builder.param(param);
-            }
+        // Flatten to remove empty params
+        for param in parsed.params().flatten() {
+            builder = builder.param(param);
+        }
+        if let Some(trailing) = parsed.trailing() {
+            builder = builder.trailing(trailing);
         }
 
         Ok(builder)
     }
 
     /// Returns tags if any are present.
-    pub fn tags(&self) -> Result<Option<Tags>, ParserError> {
-        if self.raw.starts_with('@') {
-            let end = self.raw.find(' ');
-            if let Some(end) = end {
-                Tags::try_from(&self.raw[1..end]).map(Some)
-            } else {
-                Err(ParserError::NoTagValueEnd)
-            }
-        } else {
-            Ok(None)
-        }
+    pub fn tags(
+        &self,
+    ) -> Result<impl Iterator<Item = Result<(&str, &str), ParserError>>, ParserError> {
+        Tokenizer::new(self.raw.as_str()).map(|tokenizer| tokenizer.tags().into_iter())
     }
 
     /// Returns the Prefix if present.
     pub fn prefix(&self) -> Result<Option<Prefix>, ParserError> {
-        let offset = self
-            .tags()
-            // Set offset if tags exist
-            .map(|tags| {
-                // + '@' + ' '
-                tags.map(|tags| tags.len_raw() + 2)
-            })?
-            .unwrap_or(0);
-        Ok(match self.raw.chars().nth(offset) {
-            Some(':') => match self.raw[offset..].find(' ') {
-                Some(index) => Some(Prefix::from(&self.raw[offset + 1..offset + index])),
-                None => Some(Prefix::from(&self.raw[offset + 1..])),
-            },
-            _ => None,
-        })
+        Tokenizer::new(self.raw.as_str()).and_then(|tokenizer| tokenizer.prefix().parts())
     }
 
     /// Returns the command the message represents.
-    pub fn command(&self) -> &str {
-        let without_tags = match self.raw.find(' ') {
-            Some(start) => {
-                if self.raw.starts_with('@') {
-                    &self.raw[start + 1..]
-                } else {
-                    &self.raw
-                }
-            }
-            None => &self.raw,
-        };
-        let without_prefix = match without_tags.find(' ') {
-            Some(start) => {
-                if without_tags.starts_with(':') {
-                    &without_tags[start + 1..]
-                } else {
-                    without_tags
-                }
-            }
-            None => without_tags,
-        };
-        match without_prefix.find(' ') {
-            Some(end) => &without_prefix[..end],
-            None => without_prefix,
-        }
+    pub fn command(&self) -> Result<&str, ParserError> {
+        Tokenizer::new(self.raw.as_str()).and_then(|tokenizer| tokenizer.command().command())
     }
 
     /// Returns the params if any are present.
-    pub fn params(&self) -> Option<Params> {
-        let command = self.command();
-        let cmd_start = self.raw.find(command).unwrap();
-        self.raw[cmd_start..]
-            .find(' ')
-            .map(|param_start| Params::from(&self.raw[cmd_start + param_start..]))
+    pub fn params(&self) -> Result<impl Iterator<Item = &str>, ParserError> {
+        Tokenizer::new(self.raw.as_str()).map(|tokenizer| tokenizer.params().into_iter())
+    }
+
+    /// Returns the trailing parameter if any is present.
+    pub fn trailing(&self) -> Result<Option<&str>, ParserError> {
+        Tokenizer::new(self.raw.as_str()).map(|tokenizer| tokenizer.trailing().trailing())
     }
 }
 
@@ -232,9 +190,10 @@ mod tests {
         let message =
             Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
         let tags = message.tags();
-        assert!(tags.is_ok(), "{:?}", tags);
-        let tags = tags.unwrap();
-        assert!(tags.is_some(), "{:?}", tags);
+        assert!(tags.is_ok(), "{:?}", tags.err());
+        let mut tags = tags.unwrap().into_iter();
+        let tag = tags.next();
+        assert!(tag.is_some(), "{:?}", tag);
     }
 
     #[test]
