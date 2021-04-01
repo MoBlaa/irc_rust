@@ -43,11 +43,12 @@
 //! use irc_rust::Message;
 //! use std::io::{BufRead, stdin};
 //!
+//! # fn main() -> Result<(), irc_rust::errors::ParserError> {
 //! for line in stdin().lock().lines() {
 //!     match line {
 //!         Ok(line) => {
 //!             let message = Message::from(line);
-//!             println!("> Received command: {}", message.command());
+//!             println!("> Received command: {}", message.command()?);
 //!         }
 //!         Err(e) => {
 //!             println!("got error; aborting: {}", e);
@@ -55,7 +56,8 @@
 //!         }
 //!     }
 //! }
-//!
+//! # Ok::<(), irc_rust::errors::ParserError>(())
+//! # }
 //! ```
 
 #[cfg(feature = "serde")]

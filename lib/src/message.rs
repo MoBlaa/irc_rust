@@ -32,19 +32,20 @@ use std::convert::TryFrom;
 /// use irc_rust::Message;
 /// use std::error::Error;
 ///
-/// fn main() -> Result<(), Box<dyn Error>> {
-///     let message = Message::builder("CMD")
-///         .tag("key1", "value1")
-///         .tag("key2", "value2")
-///         .prefix("name", Some("user"), Some("host"))
-///         .param("param1").param("param2")
-///         .trailing("trailing")
-///         .build();
+/// # fn main() -> Result<(), irc_rust::errors::ParserError> {
+/// let message = Message::builder("CMD")
+///     .tag("key1", "value1")
+///     .tag("key2", "value2")
+///     .prefix("name", Some("user"), Some("host"))
+///     .param("param1").param("param2")
+///     .trailing("trailing")
+///     .build();
 ///
-///     let tags = message.tags().unwrap().unwrap();
-///     println!("key1={}", tags.get("key1").unwrap()); // Prints 'key1=value1'
-///     Ok(())
-/// }
+/// let mut tags = message.tags()?;
+/// let (key, value) = tags.next().unwrap()?;
+/// println!("{}={}", key, value); // Prints 'key1=value1'
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// You can create a new message from an existing message by calling the `to_builder` method.
