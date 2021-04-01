@@ -1,4 +1,8 @@
+branch: true
+ignore-not-existing: true
+llvm: true
 ignore:
   - "C:/*"
   - "bench/*"
   - "../"
+  - "/*"
