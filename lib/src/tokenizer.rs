@@ -145,6 +145,8 @@ impl<'a> Tokenizer<'a, Start> {
             let mut position = 0;
             for index in cfg.params {
                 let delta = index - position;
+                // Fill with |delta| Nones
+                params.extend(vec![None; delta]);
                 position = index;
                 params.push(iter.nth(delta));
             }

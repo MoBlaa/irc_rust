@@ -43,12 +43,37 @@ pub struct Message {
 }
 
 impl Message {
-    /// Returns a fully parsed but zero-copy struct referencing the struct.
-    pub fn parsed(&self) -> Result<Parsed, ParserError> {
+    /// Returns a fully parsed but zero-copy struct referencing the parsed message.
+    pub fn parse(&self) -> Result<Parsed, ParserError> {
         Parsed::try_from(self.raw.as_str())
     }
 
     /// Returns a query instance to partially parse the message.
+    ///
+    /// # Usage
+    ///
+    /// ```rust
+    /// use irc_rust::Message;
+    /// use irc_rust::tokenizer::PartialCfg;
+    /// use std::collections::HashSet;
+    /// use std::iter::FromIterator;
+    /// # fn main() -> Result<(), irc_rust::errors::ParserError> {
+    /// let message = "@tag1=value1;tag2=value2 CMD param0 param1 :trailing"
+    ///     .parse::<Message>()?;
+    /// let parsed = message.partial(PartialCfg {
+    ///         tags: HashSet::from_iter(vec!["tag2"]),
+    ///         params: vec![1],
+    ///         trailing: true,
+    ///         ..PartialCfg::default()
+    ///     })?;
+    /// assert_eq!(Some("CMD"), parsed.command());
+    /// assert!(parsed.tag("tag1").is_none());
+    /// assert!(parsed.prefix().is_none());
+    /// assert_eq!(Some("value2"), parsed.tag("tag2"));
+    /// assert_eq!(Some("param1"), parsed.param(1));
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn partial<'a>(&'a self, cfg: PartialCfg<'a>) -> Result<Parsed<'a>, ParserError> {
         Tokenizer::new(self.raw.as_str())?.parse_partial(cfg)
     }

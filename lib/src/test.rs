@@ -12,7 +12,7 @@ fn test_parse() -> Result<(), Box<dyn Error>> {
         "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing"
     );
 
-    let parsed = message.parsed()?;
+    let parsed = message.parse()?;
 
     let val = parsed.tag("key1");
     assert_eq!(val, Some("value1"));

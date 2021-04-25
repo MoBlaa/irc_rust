@@ -57,6 +57,35 @@ impl<'a> Parsed<'a> {
         self.tags.get(key).copied()
     }
 
+    /// Returns a param with given original index. If the [Parsed] instance
+    /// represents a partially parsed message the original index will preserve.
+    ///
+    /// # Usage
+    ///
+    /// ```rust
+    /// use irc_rust::Message;
+    /// # fn main() -> Result<(), irc_rust::errors::ParserError> {
+    /// // A fully parsed message
+    /// use irc_rust::tokenizer::PartialCfg;
+    /// let message = Message::from("CMD param0 param1 param2");
+    /// let parsed = message.parse()?;
+    /// assert_eq!(Some("param0"), parsed.param(0));
+    /// assert_eq!(Some("param1"), parsed.param(1));
+    /// assert_eq!(Some("param2"), parsed.param(2));
+    ///
+    /// // A partially parsed message preserves the original index
+    /// let message = Message::from("CMD param0 param1 param2");
+    /// let partial = message.partial(PartialCfg {
+    ///         params: vec![1],
+    ///         ..Default::default()
+    ///     })?;
+    /// assert_eq!(None, partial.param(0));
+    /// assert_eq!(Some("param1"), partial.param(1));
+    /// assert_eq!(None, partial.param(2));
+    ///
+    /// # Ok(())
+    /// # }
+    /// ````
     pub fn param(&self, index: usize) -> Option<&'a str> {
         match self.params.get(index) {
             Some(Some(st)) => Some(*st),
@@ -126,7 +155,7 @@ mod tests {
             .param("param0")
             .trailing("Trailing Parameter!")
             .build();
-        let parsed = message.parsed()?;
+        let parsed = message.parse()?;
 
         assert_eq!(Some("value1"), parsed.tag("tag1"));
         assert_eq!(Some("value2"), parsed.tag("tag2"));

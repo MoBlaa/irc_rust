@@ -17,7 +17,7 @@ fn bench_full(b: &mut Bencher) {
     let raw = str.as_str();
     b.iter(move || {
         let message = Message::from(raw);
-        let parsed = message.parsed().unwrap();
+        let parsed = message.parse().unwrap();
 
         let val = parsed.tag("key1");
         assert_eq!(val, Some("value1"));
