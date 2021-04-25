@@ -24,36 +24,6 @@ pub struct Tokenizer<'a, T: State> {
 
 pub trait State: PartialEq + Eq + Debug {}
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
-pub struct Start;
-
-impl State for Start {}
-
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
-pub struct TagsState;
-
-impl State for TagsState {}
-
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
-pub struct PrefixState;
-
-impl State for PrefixState {}
-
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
-pub struct CommandState;
-
-impl State for CommandState {}
-
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
-pub struct ParamsState;
-
-impl State for ParamsState {}
-
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
-pub struct TrailingState;
-
-impl State for TrailingState {}
-
 impl<'a, S: State> Tokenizer<'a, S> {
     fn skip_until_char(&mut self, ch: char, skip_char: bool) {
         if self.raw.starts_with(ch) {
@@ -105,6 +75,11 @@ impl<'a, S: State> Tokenizer<'a, S> {
         self.skip_until_str(" :");
     }
 }
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct Start;
+
+impl State for Start {}
 
 impl<'a> Tokenizer<'a, Start> {
     pub fn new(raw: &'a str) -> Result<Self, ParserError> {
@@ -231,6 +206,11 @@ impl<'a> Tokenizer<'a, Start> {
     }
 }
 
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct TagsState;
+
+impl State for TagsState {}
+
 impl<'a> Tokenizer<'a, TagsState> {
     pub fn as_iter(&mut self) -> IntoTagsIter<'a> {
         IntoTagsIter(*self)
@@ -268,6 +248,61 @@ impl<'a> Tokenizer<'a, TagsState> {
         }
     }
 }
+
+impl<'a> IntoIterator for Tokenizer<'a, TagsState> {
+    type Item = Result<(&'a str, &'a str), ParserError>;
+    type IntoIter = IntoTagsIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoTagsIter(self)
+    }
+}
+
+pub struct IntoTagsIter<'a>(Tokenizer<'a, TagsState>);
+
+impl<'a> Iterator for IntoTagsIter<'a> {
+    type Item = Result<(&'a str, &'a str), ParserError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &self.0.raw[..1] {
+            "@" | ";" => {
+                let key_start = 1;
+                let key_end = self.0.raw[key_start..]
+                    .find(&['='][..])
+                    .map(|key_end| (key_end + key_start, key_end + key_start + 1))
+                    .or_else(|| {
+                        let key_end = key_start + self.0.raw[key_start..].find(&[' ', ';'][..])?;
+                        Some((key_end, key_end))
+                    });
+                if key_end.is_none() {
+                    // Skip till the end as only tags seem to be present
+                    self.0.skip_to_end();
+                    return Some(Err(ParserError::NoTagKeyEnd));
+                }
+                let (key_end, val_start) = key_end.unwrap();
+                let val_end = self.0.raw[val_start..].find(&[';', ' '][..]);
+                if val_end.is_none() {
+                    // Skip till the end as only tags seem to be present
+                    self.0.skip_to_end();
+                    return Some(Err(ParserError::NoTagValueEnd));
+                }
+                let val_end = val_start + val_end.unwrap();
+                let key_val = (
+                    &self.0.raw[key_start..key_end],
+                    &self.0.raw[val_start..val_end],
+                );
+                self.0.raw = &self.0.raw[val_end..];
+                Some(Ok(key_val))
+            }
+            _ => None,
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct PrefixState;
+
+impl State for PrefixState {}
 
 impl<'a> Tokenizer<'a, PrefixState> {
     pub fn name(&mut self) -> Result<Option<&'a str>, ParserError> {
@@ -353,6 +388,11 @@ impl<'a> Tokenizer<'a, PrefixState> {
     }
 }
 
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct CommandState;
+
+impl State for CommandState {}
+
 impl<'a> Tokenizer<'a, CommandState> {
     pub fn command(&mut self) -> Result<&'a str, ParserError> {
         if self.raw.starts_with(' ') {
@@ -384,6 +424,11 @@ impl<'a> Tokenizer<'a, CommandState> {
         }
     }
 }
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct ParamsState;
+
+impl State for ParamsState {}
 
 impl<'a> Tokenizer<'a, ParamsState> {
     pub fn trailing(mut self) -> Tokenizer<'a, TrailingState> {
@@ -430,62 +475,17 @@ impl<'a> Iterator for IntoParamsIter<'a> {
     }
 }
 
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+pub struct TrailingState;
+
+impl State for TrailingState {}
+
 impl<'a> Tokenizer<'a, TrailingState> {
     pub fn trailing(&self) -> Option<&'a str> {
         if self.raw.starts_with(" :") {
             Some(&self.raw[2..])
         } else {
             None
-        }
-    }
-}
-
-impl<'a> IntoIterator for Tokenizer<'a, TagsState> {
-    type Item = Result<(&'a str, &'a str), ParserError>;
-    type IntoIter = IntoTagsIter<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        IntoTagsIter(self)
-    }
-}
-
-pub struct IntoTagsIter<'a>(Tokenizer<'a, TagsState>);
-
-impl<'a> Iterator for IntoTagsIter<'a> {
-    type Item = Result<(&'a str, &'a str), ParserError>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match &self.0.raw[..1] {
-            "@" | ";" => {
-                let key_start = 1;
-                let key_end = self.0.raw[key_start..]
-                    .find(&['='][..])
-                    .map(|key_end| (key_end + key_start, key_end + key_start + 1))
-                    .or_else(|| {
-                        let key_end = key_start + self.0.raw[key_start..].find(&[' ', ';'][..])?;
-                        Some((key_end, key_end))
-                    });
-                if key_end.is_none() {
-                    // Skip till the end as only tags seem to be present
-                    self.0.skip_to_end();
-                    return Some(Err(ParserError::NoTagKeyEnd));
-                }
-                let (key_end, val_start) = key_end.unwrap();
-                let val_end = self.0.raw[val_start..].find(&[';', ' '][..]);
-                if val_end.is_none() {
-                    // Skip till the end as only tags seem to be present
-                    self.0.skip_to_end();
-                    return Some(Err(ParserError::NoTagValueEnd));
-                }
-                let val_end = val_start + val_end.unwrap();
-                let key_val = (
-                    &self.0.raw[key_start..key_end],
-                    &self.0.raw[val_start..val_end],
-                );
-                self.0.raw = &self.0.raw[val_end..];
-                Some(Ok(key_val))
-            }
-            _ => None,
         }
     }
 }
