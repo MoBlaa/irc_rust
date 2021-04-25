@@ -1,7 +1,7 @@
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
-use crate::builder::Message as MessageBuilder;
+use crate::builder::Builder as MessageBuilder;
 use crate::errors::ParserError;
 use crate::params::Parameterized;
 use crate::parsed::Parsed;

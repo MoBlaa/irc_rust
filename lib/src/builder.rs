@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 /// A MessageBuilder for a simpler generation of a message instead of building an string first.
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct Message<'a> {
+pub struct Builder<'a> {
     tags: HashMap<&'a str, &'a str>,
     prefix_name: Option<&'a str>,
     prefix_user: Option<&'a str>,
@@ -12,10 +12,10 @@ pub struct Message<'a> {
     trailing: Option<&'a str>,
 }
 
-impl<'a> Message<'a> {
+impl<'a> Builder<'a> {
     /// Creates a new empty builder.
     pub fn new(command: &'a str) -> Self {
-        Message {
+        Builder {
             tags: HashMap::new(),
             prefix_name: None,
             prefix_user: None,
@@ -32,7 +32,7 @@ impl<'a> Message<'a> {
     /// # Panics
     ///
     /// Panics if **cmd** is empty.
-    pub fn command(mut self, cmd: &'a str) -> Message<'a> {
+    pub fn command(mut self, cmd: &'a str) -> Builder<'a> {
         if cmd.is_empty() {
             panic!("tried to set empty command");
         }
@@ -45,7 +45,7 @@ impl<'a> Message<'a> {
     /// # Panics
     ///
     /// Panics if **key** is empty. **value** is allowed to be empty.
-    pub fn tag(mut self, key: &'a str, value: &'a str) -> Message<'a> {
+    pub fn tag(mut self, key: &'a str, value: &'a str) -> Builder<'a> {
         if key.is_empty() {
             panic!("tried to set tag with empty key");
         }
@@ -63,7 +63,7 @@ impl<'a> Message<'a> {
         name: &'a str,
         user: Option<&'a str>,
         host: Option<&'a str>,
-    ) -> Message<'a> {
+    ) -> Builder<'a> {
         if name.is_empty() {
             panic!("tried to set empty prefix name");
         }
@@ -87,7 +87,7 @@ impl<'a> Message<'a> {
     /// # Panics
     ///
     /// Panics if **param** is empty.
-    pub fn param(mut self, param: &'a str) -> Message<'a> {
+    pub fn param(mut self, param: &'a str) -> Builder<'a> {
         if param.is_empty() {
             panic!("tried to add empty param");
         }
@@ -102,7 +102,7 @@ impl<'a> Message<'a> {
     /// # Panics
     ///
     /// Panics if **param** is empty.
-    pub fn set_param(mut self, index: usize, param: &'a str) -> Message<'a> {
+    pub fn set_param(mut self, index: usize, param: &'a str) -> Builder<'a> {
         if param.is_empty() {
             panic!("tried to set empty param");
         }
@@ -113,7 +113,7 @@ impl<'a> Message<'a> {
         self
     }
 
-    pub fn remove_param(mut self, index: usize) -> Message<'a> {
+    pub fn remove_param(mut self, index: usize) -> Builder<'a> {
         if index < self.params.len() {
             self.params.remove(index);
         }
@@ -121,7 +121,7 @@ impl<'a> Message<'a> {
     }
 
     //( Add a trailing param;
-    pub fn trailing(mut self, trailing: &'a str) -> Message<'a> {
+    pub fn trailing(mut self, trailing: &'a str) -> Builder<'a> {
         self.trailing = Some(trailing);
         self
     }
