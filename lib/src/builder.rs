@@ -1,5 +1,6 @@
 use crate::errors::ParserError;
 use crate::parsed::Parsed;
+use crate::Message;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::str::FromStr;
@@ -265,5 +266,13 @@ impl FromStr for Builder {
         }
 
         Ok(builder)
+    }
+}
+
+impl TryFrom<Message> for Builder {
+    type Error = ParserError;
+
+    fn try_from(value: Message) -> Result<Self, Self::Error> {
+        value.to_builder()
     }
 }

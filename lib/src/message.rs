@@ -78,6 +78,7 @@ impl Message {
         Tokenizer::new(self.raw.as_str())?.parse_partial(cfg)
     }
 
+    /// Returns a tokenizer over the message. Can be used to implement a custom parsing algorithm.
     pub fn tokenizer(&self) -> Result<Tokenizer<Start>, ParserError> {
         Tokenizer::new(self.raw.as_str())
     }
@@ -90,24 +91,7 @@ impl Message {
     /// Creates a builder from this message. Only initializes fields already present in the message.
     /// By using this method a whole new Message will be created.
     pub fn to_builder(&self) -> Result<MessageBuilder, ParserError> {
-        let parsed = Parsed::try_from(self.raw.as_str())?;
-
-        let mut builder = MessageBuilder::new(parsed.command().ok_or(ParserError::NoCommand)?);
-        for (key, value) in parsed.tags() {
-            builder = builder.tag(key, value)
-        }
-        if let Some(&(name, user, host)) = parsed.prefix() {
-            builder = builder.prefix(name, user, host);
-        }
-        // Flatten to remove empty params
-        for param in parsed.params().flatten() {
-            builder = builder.param(param);
-        }
-        if let Some(trailing) = parsed.trailing() {
-            builder = builder.trailing(trailing);
-        }
-
-        Ok(builder)
+        MessageBuilder::from_str(self.raw.as_str())
     }
 
     /// Returns tags if any are present.
