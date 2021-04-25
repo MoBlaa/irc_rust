@@ -1,7 +1,5 @@
 use crate::errors::ParserError;
-use crate::params::Parameterized;
-use crate::prefix::{Prefix, Prefixed};
-use crate::tags::Taggable;
+use crate::prefix::Prefix;
 use crate::tokenizer::Tokenizer;
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -54,37 +52,31 @@ impl<'a> Parsed<'a> {
     pub fn tags(&self) -> impl Iterator<Item = (&&'a str, &&'a str)> {
         self.tags.iter()
     }
-}
 
-impl<'a> Taggable<'a> for Parsed<'a> {
-    fn tag(&self, key: &str) -> Option<&'a str> {
+    pub fn tag(&self, key: &str) -> Option<&'a str> {
         self.tags.get(key).copied()
     }
-}
 
-impl<'a> Parameterized<'a> for Parsed<'a> {
-    fn param(&self, index: usize) -> Option<&'a str> {
+    pub fn param(&self, index: usize) -> Option<&'a str> {
         match self.params.get(index) {
             Some(Some(st)) => Some(*st),
             _ => None,
         }
     }
 
-    fn trailing(&self) -> Option<&'a str> {
+    pub fn trailing(&self) -> Option<&'a str> {
         self.trailing
     }
-}
 
-impl<'a> Prefixed<'a> for Parsed<'a> {
-    fn name(&self) -> Option<&'a str> {
+    pub fn prefix_name(&self) -> Option<&'a str> {
         self.prefix.as_ref().map(|&(name, _user, _host)| name)
     }
 
-    fn user(&self) -> Option<&'a str> {
+    pub fn prefix_user(&self) -> Option<&'a str> {
         self.prefix.as_ref().and_then(|&(_name, user, _host)| user)
     }
 
-    fn host(&self) -> Option<&'a str> {
+    pub fn prefix_host(&self) -> Option<&'a str> {
         self.prefix.as_ref().and_then(|&(_name, _user, host)| host)
     }
 }
@@ -122,8 +114,6 @@ impl<'a> TryFrom<&'a str> for Parsed<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::params::Parameterized;
-    use crate::tags::Taggable;
     use crate::Message;
     use std::error::Error;
 

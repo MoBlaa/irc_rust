@@ -1,7 +1,5 @@
 use crate::errors::ParserError;
 use crate::message::Message;
-use crate::params::Parameterized;
-use crate::tags::Taggable;
 use std::error::Error;
 
 #[test]

@@ -5,8 +5,6 @@ use rand::Rng;
 use test::Bencher;
 
 use irc_rust::errors::ParserError;
-use irc_rust::params::Parameterized;
-use irc_rust::tags::Taggable;
 use irc_rust::tokenizer::PartialCfg;
 use irc_rust::Message;
 use std::collections::{HashMap, HashSet};

@@ -67,10 +67,8 @@ extern crate serde;
 pub mod builder;
 pub mod errors;
 pub mod message;
-pub mod params;
 pub mod parsed;
 pub mod prefix;
-pub mod tags;
 pub mod tokenizer;
 
 #[cfg(test)]

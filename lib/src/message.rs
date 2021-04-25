@@ -3,7 +3,6 @@ use std::fmt::{Display, Formatter};
 
 use crate::builder::Builder as MessageBuilder;
 use crate::errors::ParserError;
-use crate::params::Parameterized;
 use crate::parsed::Parsed;
 use crate::prefix::Prefix;
 use crate::tokenizer::{PartialCfg, Start, Tokenizer};

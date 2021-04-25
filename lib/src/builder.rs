@@ -1,5 +1,4 @@
 use crate::errors::ParserError;
-use crate::params::Parameterized;
 use crate::parsed::Parsed;
 use std::collections::HashMap;
 use std::convert::TryFrom;
