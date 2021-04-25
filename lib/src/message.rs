@@ -60,7 +60,7 @@ impl Message {
     /// # fn main() -> Result<(), irc_rust::errors::ParserError> {
     /// let message = "@tag1=value1;tag2=value2 CMD param0 param1 :trailing"
     ///     .parse::<Message>()?;
-    /// let parsed = message.partial(PartialCfg {
+    /// let parsed = message.parse_partial(PartialCfg {
     ///         tags: HashSet::from_iter(vec!["tag2"]),
     ///         params: vec![1],
     ///         trailing: true,
@@ -74,7 +74,7 @@ impl Message {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn partial<'a>(&'a self, cfg: PartialCfg<'a>) -> Result<Parsed<'a>, ParserError> {
+    pub fn parse_partial<'a>(&'a self, cfg: PartialCfg<'a>) -> Result<Parsed<'a>, ParserError> {
         Tokenizer::new(self.raw.as_str())?.parse_partial(cfg)
     }
 

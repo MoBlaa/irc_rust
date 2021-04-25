@@ -82,7 +82,7 @@ fn bench_tag_get(b: &mut Bencher) -> Result<(), ParserError> {
 
         let message = Message::from(str.as_str());
         let message = message
-            .partial(PartialCfg {
+            .parse_partial(PartialCfg {
                 tags: HashSet::from_iter(vec![skey.as_str()]),
                 ..Default::default()
             })

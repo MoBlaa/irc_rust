@@ -75,7 +75,7 @@ impl<'a> Parsed<'a> {
     ///
     /// // A partially parsed message preserves the original index
     /// let message = Message::from("CMD param0 param1 param2");
-    /// let partial = message.partial(PartialCfg {
+    /// let partial = message.parse_partial(PartialCfg {
     ///         params: vec![1],
     ///         ..Default::default()
     ///     })?;
