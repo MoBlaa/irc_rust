@@ -148,9 +148,7 @@ impl<'a> Tokenizer<'a, Start> {
         let mut tokenizer = tokenizer.prefix();
         if let Some((user, host)) = cfg.prefix {
             result_prefix = Some((
-                tokenizer
-                    .name()?
-                    .ok_or_else(|| ParserError::PrefixWithoutName)?,
+                tokenizer.name()?.ok_or(ParserError::PrefixWithoutName)?,
                 if user { tokenizer.user()? } else { None },
                 if host { tokenizer.name()? } else { None },
             ));
