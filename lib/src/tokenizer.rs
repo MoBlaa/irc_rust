@@ -708,7 +708,7 @@ mod tests {
         let mut tokenizer = Tokenizer::new(
             "@key1=value1;key2=value2 :name!user@host CMD param0 param1 :Trailing parameter!@:=;",
         )?
-            .tags();
+        .tags();
         let mut iter = tokenizer.as_iter();
         assert_eq!(Some(Ok(("key1", "value1"))), iter.next());
         assert_eq!(Some(Ok(("key2", "value2"))), iter.next());
