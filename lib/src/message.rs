@@ -5,7 +5,8 @@ use crate::builder::Builder as MessageBuilder;
 use crate::errors::ParserError;
 use crate::params::Parameterized;
 use crate::parsed::Parsed;
-use crate::tokenizer::{PartialCfg, Prefix, Start, Tokenizer};
+use crate::prefix::Prefix;
+use crate::tokenizer::{PartialCfg, Start, Tokenizer};
 use std::convert::TryFrom;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
@@ -102,12 +103,8 @@ impl Message {
         for (key, value) in parsed.tags() {
             builder = builder.tag(key, value)
         }
-        if let Some(parsed) = parsed.prefix() {
-            builder = builder.prefix(
-                parsed.name().ok_or(ParserError::PrefixWithoutName)?,
-                parsed.user(),
-                parsed.host(),
-            );
+        if let Some(&(name, user, host)) = parsed.prefix() {
+            builder = builder.prefix(name, user, host);
         }
         // Flatten to remove empty params
         for param in parsed.params().flatten() {

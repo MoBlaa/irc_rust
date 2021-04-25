@@ -47,11 +47,11 @@ fn bench_full(b: &mut Bencher) {
 
         let prefix = parsed.prefix();
         assert!(prefix.is_some());
-        let prefix = prefix.unwrap();
+        let &(name, user, host) = prefix.unwrap();
 
-        assert_eq!(prefix.name(), Some("name"));
-        assert_eq!(prefix.user(), Some("user"));
-        assert_eq!(prefix.host(), Some("host"));
+        assert_eq!(name, "name");
+        assert_eq!(user, Some("user"));
+        assert_eq!(host, Some("host"));
         // 519 ns/iter
 
         assert_eq!(parsed.command(), Some("CMD"));

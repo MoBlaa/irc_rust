@@ -1,32 +1,10 @@
 use crate::errors::ParserError;
 use crate::params::Parameterized;
+use crate::prefix::{Prefix, Prefixed};
 use crate::tags::Taggable;
 use crate::tokenizer::Tokenizer;
 use std::collections::HashMap;
 use std::convert::TryFrom;
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ParsedPrefix<'a>(Option<&'a str>, Option<&'a str>, Option<&'a str>);
-
-impl<'a> ParsedPrefix<'a> {
-    pub fn name(&self) -> Option<&'a str> {
-        self.0
-    }
-
-    pub fn user(&self) -> Option<&'a str> {
-        self.1
-    }
-
-    pub fn host(&self) -> Option<&'a str> {
-        self.2
-    }
-}
-
-impl<'a> From<(Option<&'a str>, Option<&'a str>, Option<&'a str>)> for ParsedPrefix<'a> {
-    fn from((name, user, host): (Option<&'a str>, Option<&'a str>, Option<&'a str>)) -> Self {
-        Self(name, user, host)
-    }
-}
 
 /// Fully parsed Message instead of parsing on demand. Instead of
 /// zero-allocation this struct implements zero-copy parsing.
@@ -35,7 +13,7 @@ impl<'a> From<(Option<&'a str>, Option<&'a str>, Option<&'a str>)> for ParsedPre
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Parsed<'a> {
     tags: HashMap<&'a str, &'a str>,
-    prefix: Option<ParsedPrefix<'a>>,
+    prefix: Option<Prefix<'a>>,
     command: Option<&'a str>,
     params: Vec<Option<&'a str>>,
     trailing: Option<&'a str>,
@@ -44,7 +22,7 @@ pub struct Parsed<'a> {
 impl<'a> Parsed<'a> {
     pub(crate) fn new(
         tags: HashMap<&'a str, &'a str>,
-        prefix: Option<ParsedPrefix<'a>>,
+        prefix: Option<Prefix<'a>>,
         command: Option<&'a str>,
         params: Vec<Option<&'a str>>,
         trailing: Option<&'a str>,
@@ -62,7 +40,7 @@ impl<'a> Parsed<'a> {
         self.command
     }
 
-    pub fn prefix(&self) -> Option<&ParsedPrefix<'a>> {
+    pub fn prefix(&self) -> Option<&Prefix<'a>> {
         self.prefix.as_ref()
     }
 
@@ -94,6 +72,20 @@ impl<'a> Parameterized<'a> for Parsed<'a> {
     }
 }
 
+impl<'a> Prefixed<'a> for Parsed<'a> {
+    fn name(&self) -> Option<&'a str> {
+        self.prefix.as_ref().map(|&(name, _user, _host)| name)
+    }
+
+    fn user(&self) -> Option<&'a str> {
+        self.prefix.as_ref().and_then(|&(_name, user, _host)| user)
+    }
+
+    fn host(&self) -> Option<&'a str> {
+        self.prefix.as_ref().and_then(|&(_name, _user, host)| host)
+    }
+}
+
 impl<'a> TryFrom<&'a str> for Parsed<'a> {
     type Error = ParserError;
 
@@ -108,7 +100,7 @@ impl<'a> TryFrom<&'a str> for Parsed<'a> {
         let mut tokenizer = tokenizer.prefix();
         let prefix = tokenizer
             .parts()?
-            .map(|(name, user, host)| ParsedPrefix(Some(name), user, host));
+            .map(|(name, user, host)| (name, user, host));
         let mut tokenizer = tokenizer.command();
         let command = tokenizer.command()?;
         let mut tokenizer = tokenizer.params();
@@ -146,7 +138,7 @@ mod tests {
         assert_eq!(Some("value1"), parsed.tag("tag1"));
         assert_eq!(Some("value2"), parsed.tag("tag2"));
         assert_eq!(
-            Some((Some("name"), Some("user"), Some("host"))),
+            Some(("name", Some("user"), Some("host"))),
             parsed.prefix().map(|prefix| (prefix.0, prefix.1, prefix.2))
         );
         assert_eq!(Some("param0"), parsed.param(0));

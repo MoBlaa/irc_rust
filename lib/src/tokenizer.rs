@@ -1,5 +1,6 @@
 use crate::errors::ParserError;
-use crate::parsed::{Parsed, ParsedPrefix};
+use crate::parsed::Parsed;
+use crate::prefix::Prefix;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -145,12 +146,14 @@ impl<'a> Tokenizer<'a, Start> {
 
         // Parse prefix
         let mut tokenizer = tokenizer.prefix();
-        if let Some((name, user, host)) = cfg.prefix {
-            result_prefix = Some(ParsedPrefix::from((
-                if name { tokenizer.name()? } else { None },
+        if let Some((user, host)) = cfg.prefix {
+            result_prefix = Some((
+                tokenizer
+                    .name()?
+                    .ok_or_else(|| ParserError::PrefixWithoutName)?,
                 if user { tokenizer.user()? } else { None },
                 if host { tokenizer.name()? } else { None },
-            )));
+            ));
         }
 
         // Command
@@ -267,8 +270,6 @@ impl<'a> Tokenizer<'a, TagsState> {
         }
     }
 }
-
-pub type Prefix<'a> = (&'a str, Option<&'a str>, Option<&'a str>);
 
 impl<'a> Tokenizer<'a, PrefixState> {
     pub fn name(&mut self) -> Result<Option<&'a str>, ParserError> {
@@ -494,7 +495,7 @@ impl<'a> Iterator for IntoTagsIter<'a> {
 #[derive(Clone)]
 pub struct PartialCfg<'a> {
     pub tags: HashSet<&'a str>,
-    pub prefix: Option<(bool, bool, bool)>,
+    pub prefix: Option<(bool, bool)>,
     pub command: bool,
     pub params: Vec<usize>,
     pub trailing: bool,
