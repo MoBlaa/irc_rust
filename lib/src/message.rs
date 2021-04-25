@@ -28,46 +28,6 @@ use std::convert::TryFrom;
 /// ```
 ///
 /// To build a message in a verbose and easy to read way you can use the `Message::builder` method and the `MessageBuilder`.
-///
-/// ```rust
-/// use irc_rust::Message;
-/// use std::error::Error;
-///
-/// # fn main() -> Result<(), irc_rust::errors::ParserError> {
-/// let message = Message::builder("CMD")
-///     .tag("key1", "value1")
-///     .tag("key2", "value2")
-///     .prefix("name", Some("user"), Some("host"))
-///     .param("param1").param("param2")
-///     .trailing("trailing")
-///     .build();
-///
-/// let mut tags = message.tags()?;
-/// let (key, value) = tags.next().unwrap()?;
-/// println!("{}={}", key, value); // Prints 'key1=value1'
-/// # Ok(())
-/// # }
-/// ```
-///
-/// You can create a new message from an existing message by calling the `to_builder` method.
-/// To alter existing parameters the `set_param` method can be used.
-///
-/// ```rust
-/// use irc_rust::Message;
-/// use std::error::Error;
-///
-/// fn main() -> Result<(), Box<dyn Error>> {
-///     let message = Message::from("@key=value :name!user@host CMD param1 :trailing!").to_builder()?
-///     .tag("key", "value2")
-///     .param("param2")
-///     .param("param4")
-///     .set_param(1, "param3")
-///     .build();
-///
-///     assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
-///     Ok(())
-/// }
-/// ```
 #[derive(Debug, Clone, Eq, Ord, PartialOrd, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Message {
@@ -96,7 +56,7 @@ impl Message {
 
     /// Creates a builder from this message. Only initializes fields already present in the message.
     /// By using this method a whole new Message will be created.
-    pub fn to_builder(&self) -> Result<MessageBuilder<'_>, ParserError> {
+    pub fn to_builder(&self) -> Result<MessageBuilder, ParserError> {
         let parsed = Parsed::try_from(self.raw.as_str())?;
 
         let mut builder = MessageBuilder::new(parsed.command().ok_or(ParserError::NoCommand)?);
