@@ -81,7 +81,7 @@ impl Message {
 
     /// Returns a query instance to partially parse the message.
     pub fn partial<'a>(&'a self, cfg: PartialCfg<'a>) -> Result<Parsed<'a>, ParserError> {
-        Tokenizer::new(self.raw.as_str())?.into_parsed(cfg)
+        Tokenizer::new(self.raw.as_str())?.parse_partial(cfg)
     }
 
     pub fn tokenizer(&self) -> Result<Tokenizer<Start>, ParserError> {

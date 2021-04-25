@@ -117,7 +117,7 @@ impl<'a> Tokenizer<'a, Start> {
         }
     }
 
-    pub fn into_parsed(self, mut cfg: PartialCfg<'a>) -> Result<Parsed<'a>, ParserError> {
+    pub fn parse_partial(self, mut cfg: PartialCfg<'a>) -> Result<Parsed<'a>, ParserError> {
         let mut result_tags = HashMap::new();
         let mut result_prefix = None;
         let mut result_command = None;
@@ -491,13 +491,25 @@ impl<'a> Iterator for IntoTagsIter<'a> {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct PartialCfg<'a> {
     pub tags: HashSet<&'a str>,
     pub prefix: Option<(bool, bool, bool)>,
     pub command: bool,
     pub params: Vec<usize>,
     pub trailing: bool,
+}
+
+impl<'a> Default for PartialCfg<'a> {
+    fn default() -> Self {
+        Self {
+            tags: HashSet::new(),
+            prefix: None,
+            command: true,
+            params: Vec::new(),
+            trailing: false,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -696,7 +708,7 @@ mod tests {
         let mut tokenizer = Tokenizer::new(
             "@key1=value1;key2=value2 :name!user@host CMD param0 param1 :Trailing parameter!@:=;",
         )?
-        .tags();
+            .tags();
         let mut iter = tokenizer.as_iter();
         assert_eq!(Some(Ok(("key1", "value1"))), iter.next());
         assert_eq!(Some(Ok(("key2", "value2"))), iter.next());
