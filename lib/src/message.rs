@@ -8,6 +8,7 @@ use crate::parsed::Parsed;
 use crate::prefix::Prefix;
 use crate::tokenizer::{PartialCfg, Start, Tokenizer};
 use std::convert::TryFrom;
+use std::str::FromStr;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 ///
@@ -22,9 +23,17 @@ use std::convert::TryFrom;
 /// ```rust
 /// use irc_rust::Message;
 ///
+/// # fn main() -> Result<(), irc_rust::errors::ParserError> {
 /// let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 ///
+/// // Or
+///
+/// let message = "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing"
+///     .parse::<Message>()?;
+///
 /// assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// To build a message in a verbose and easy to read way you can use the `Message::builder` method and the `MessageBuilder`.
@@ -108,6 +117,14 @@ impl Message {
 impl Display for Message {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.raw.fmt(f)
+    }
+}
+
+impl FromStr for Message {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Message::from(s.to_string()))
     }
 }
 

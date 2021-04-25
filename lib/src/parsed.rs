@@ -10,6 +10,9 @@ use std::convert::TryFrom;
 /// zero-allocation this struct implements zero-copy parsing.
 ///
 /// Implements a partially or fully parsed message.
+///
+/// Doesn't implement the [std::convert::FromStr] trait as its lifetime
+/// depends on its source string.
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct Parsed<'a> {
     tags: HashMap<&'a str, &'a str>,
