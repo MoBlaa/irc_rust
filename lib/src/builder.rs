@@ -70,6 +70,17 @@ pub struct Builder {
 
 impl Builder {
     /// Creates a new empty builder.
+    ///
+    /// # Usage
+    ///
+    /// ```rust
+    /// use irc_rust::builder::Builder;
+    /// # fn main() -> Result<(), irc_rust::errors::ParserError> {
+    /// let message = Builder::new("CMD").build();
+    /// assert_eq!("CMD", message.command()?);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn new<S: ToString>(command: S) -> Self {
         Builder {
             tags: HashMap::new(),

@@ -120,7 +120,7 @@ impl Display for Message {
 }
 
 impl FromStr for Message {
-    type Err = ();
+    type Err = ParserError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Message::from(s.to_string()))
