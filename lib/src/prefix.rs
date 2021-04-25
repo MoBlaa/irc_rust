@@ -1,4 +1,4 @@
-pub trait Prefixed<'a>: Sized {
+pub trait Prefixed<'a> {
     fn name(&self) -> Option<&'a str>;
     fn user(&self) -> Option<&'a str>;
     fn host(&self) -> Option<&'a str>;
