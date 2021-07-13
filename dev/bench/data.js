@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1626183722658,
+  "lastUpdate": 1626183923725,
   "repoUrl": "https://github.com/MoBlaa/irc_rust",
   "entries": {
     "Benchmark": [
@@ -675,6 +675,54 @@ window.BENCHMARK_DATA = {
             "name": "bench__bench_tags_iter_100",
             "value": 83,
             "range": "± 2",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mo.blaa@pm.me",
+            "name": "moblaa",
+            "username": "MoBlaa"
+          },
+          "committer": {
+            "email": "mo.blaa@pm.me",
+            "name": "moblaa",
+            "username": "MoBlaa"
+          },
+          "distinct": true,
+          "id": "4ae66fb3176b1d46cec6764f1a76aa6e9673d08b",
+          "message": "fixed version",
+          "timestamp": "2021-07-13T15:44:00+02:00",
+          "tree_id": "2bb961a0f714bbc5e2e2a6bd98451060b7438ee8",
+          "url": "https://github.com/MoBlaa/irc_rust/commit/4ae66fb3176b1d46cec6764f1a76aa6e9673d08b"
+        },
+        "date": 1626183922817,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench__bench_full",
+            "value": 542,
+            "range": "± 75",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_params_iter",
+            "value": 1329,
+            "range": "± 183",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_tag_get",
+            "value": 2803,
+            "range": "± 482",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_tags_iter_100",
+            "value": 79,
+            "range": "± 9",
             "unit": "ns/iter"
           }
         ]
