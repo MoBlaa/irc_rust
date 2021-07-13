@@ -31,7 +31,7 @@ Installation:
 - Add to `Cargo.toml`:
 ```toml
 [dependencies]
-irc-rust = "0.3"
+irc-rust = "0.4"
 ```
 - Or use [`cargo edit`](https://github.com/killercup/cargo-edit) to get the latest every time:
 ```shell script
