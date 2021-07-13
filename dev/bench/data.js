@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1616783119427,
+  "lastUpdate": 1626183722658,
   "repoUrl": "https://github.com/MoBlaa/irc_rust",
   "entries": {
     "Benchmark": [
@@ -627,6 +627,54 @@ window.BENCHMARK_DATA = {
             "name": "bench__bench_tag_index",
             "value": 155,
             "range": "± 3",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mo.blaa@pm.me",
+            "name": "MoBlaa",
+            "username": "MoBlaa"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3227978143faf879c205044ec5ef99f1ebcab19b",
+          "message": "Zero Allocation Message + Zero Copy Parsed-Message (#3)\n\nProper Message Parser",
+          "timestamp": "2021-07-13T15:40:41+02:00",
+          "tree_id": "973381d2353b59b2e53c7e02c0e616e2b80755d7",
+          "url": "https://github.com/MoBlaa/irc_rust/commit/3227978143faf879c205044ec5ef99f1ebcab19b"
+        },
+        "date": 1626183720816,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "bench__bench_full",
+            "value": 531,
+            "range": "± 5",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_params_iter",
+            "value": 1549,
+            "range": "± 4",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_tag_get",
+            "value": 3393,
+            "range": "± 52",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "bench__bench_tags_iter_100",
+            "value": 83,
+            "range": "± 2",
             "unit": "ns/iter"
           }
         ]
