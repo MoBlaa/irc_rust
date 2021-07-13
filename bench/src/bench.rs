@@ -4,97 +4,130 @@ extern crate test;
 use rand::Rng;
 use test::Bencher;
 
-use irc_rust::{InvalidIrcFormatError, Message, Params, Tags};
-use std::convert::TryFrom;
+use irc_rust::errors::ParserError;
+use irc_rust::tokenizer::PartialCfg;
+use irc_rust::Message;
+use std::collections::{HashMap, HashSet};
+use std::iter::FromIterator;
 
 #[bench]
-fn bench_parse(b: &mut Bencher) {
+fn bench_full(b: &mut Bencher) {
     // Excluding the allocation of the string
     let str = String::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
     let raw = str.as_str();
     b.iter(move || {
         let message = Message::from(raw);
+        let parsed = message.parse().unwrap();
 
-        let tags = message.tags();
-        assert!(tags.is_ok(), "{:?}", tags);
-        let tags = tags.unwrap();
-        assert!(tags.is_some());
-        let tags = tags.unwrap();
-
-        let val = &tags["key1"];
-        assert_eq!(val, "value1");
-        let val = &tags["key2"];
-        assert_eq!(val, "value2");
+        let val = parsed.tag("key1");
+        assert_eq!(val, Some("value1"));
+        let val = parsed.tag("key2");
+        assert_eq!(val, Some("value2"));
         // 189 ns/iter
 
-        let mut tags = tags.iter();
-        let (key, val) = tags.next().unwrap();
-        assert_eq!(key, "key1");
-        assert_eq!(val, "value1");
-        let (key, val) = tags.next().unwrap();
-        assert_eq!(key, "key2");
-        assert_eq!(val, "value2");
+        let mut tags = parsed.tags();
+        let next_is_key1 = |next: Option<(&&str, &&str)>| {
+            let (key, val) = next.unwrap();
+            *key == "key1" && *val == "value1"
+        };
+        let next_is_key2 = |next: Option<(&&str, &&str)>| {
+            let (key, val) = next.unwrap();
+            *key == "key2" && *val == "value2"
+        };
+
+        let first = tags.next();
+        let second = tags.next();
+        assert!(
+            (next_is_key1(first) && next_is_key2(second))
+                || (next_is_key2(first) && next_is_key1(second))
+        );
         // 319 ns/iter
 
-        let prefix = message.prefix();
-        assert!(prefix.is_ok());
-        let prefix = prefix.unwrap();
+        let prefix = parsed.prefix();
         assert!(prefix.is_some());
-        let prefix = prefix.unwrap();
+        let &(name, user, host) = prefix.unwrap();
 
-        assert_eq!(prefix.name(), "name");
-        assert_eq!(prefix.user(), Some("user"));
-        assert_eq!(prefix.host(), Some("host"));
+        assert_eq!(name, "name");
+        assert_eq!(user, Some("user"));
+        assert_eq!(host, Some("host"));
         // 519 ns/iter
 
-        assert_eq!(message.command(), "CMD");
+        assert_eq!(parsed.command(), Some("CMD"));
         // 585 ns/iter
 
-        let params = message.params().unwrap();
-        let mut iter = params.iter();
-        assert_eq!(iter.next().unwrap(), "param1");
-        assert_eq!(iter.next().unwrap(), "param2");
+        let mut iter = parsed.params();
+        assert_eq!(iter.next(), Some(&Some("param1")));
+        assert_eq!(iter.next(), Some(&Some("param2")));
         assert!(iter.next().is_none());
-        assert_eq!(params.trailing().unwrap(), "trailing")
+        assert_eq!(parsed.trailing(), Some("trailing"))
         // 793 ns/iter
     });
 }
 
 #[bench]
-fn bench_tag_create(b: &mut Bencher) {
-    let mut str = String::new();
-    for i in 0..20 {
+fn bench_tag_get(b: &mut Bencher) -> Result<(), ParserError> {
+    let mut str = String::from("@");
+    for i in 0..100 {
         str = format!("{}key{}=value{}", str, i, i);
-        if i != 1000 {
+        if i < 100 - 1 {
             str.push(';');
         }
     }
-
-    b.iter(|| {
-        let tags = Tags::try_from(str.as_str());
-        assert!(tags.is_ok(), "{:?}", tags);
-        let tags = tags.unwrap();
-        assert_eq!(tags.as_ref(), str.as_str());
-    })
-}
-
-#[bench]
-fn bench_tag_index(b: &mut Bencher) -> Result<(), InvalidIrcFormatError> {
-    let mut str = String::from("");
-    for i in 0..1000 {
-        str = format!("{}key{}=value{}", str, i, i);
-        if i != 1000 {
-            str.push(';');
-        }
-    }
-    let tags = Tags::try_from(str.as_str())?;
+    str.push_str(" CMD");
 
     b.iter(|| {
         let mut rng = rand::thread_rng();
-        let ikey = rng.gen_range(0, 1000);
+        let ikey = rng.gen_range(0, 100);
         let skey = format!("key{}", ikey);
-        let val = &tags[&skey];
-        assert_eq!(val, format!("value{}", ikey));
+
+        let message = Message::from(str.as_str());
+        let message = message
+            .parse_partial(PartialCfg {
+                tags: HashSet::from_iter(vec![skey.as_str()]),
+                ..Default::default()
+            })
+            .unwrap();
+
+        let val = message.tag(&skey);
+        assert!(val.is_some(), "{:?}", val);
+        assert_eq!(val.unwrap(), format!("value{}", ikey));
+    });
+
+    Ok(())
+}
+
+#[bench]
+fn bench_tags_iter_100(b: &mut Bencher) -> Result<(), ParserError> {
+    let mut str = String::from("");
+    let mut key_values = HashMap::new();
+    for i in 0..100 {
+        let key = format!("key{}", i);
+        let value = format!("value{}", i);
+        key_values.insert(key.clone(), value.clone());
+
+        str = format!("{}{}={}", str, key, value);
+        if i < 100 - 1 {
+            str.push(';');
+        }
+    }
+    b.iter(|| {
+        let message = Message::from(str.as_str());
+        let tags = message
+            .tags()
+            .unwrap()
+            .into_iter()
+            .collect::<Result<Vec<(&str, &str)>, ParserError>>()
+            .unwrap();
+        for (key, value) in tags.iter() {
+            let stored = key_values.get(&key.to_string());
+            assert!(
+                stored.is_some(),
+                "No value for key '{}' found in '{:?}'",
+                key,
+                tags
+            );
+            assert_eq!(stored.unwrap(), value);
+        }
     });
 
     Ok(())
@@ -109,21 +142,8 @@ fn bench_params_iter(b: &mut Bencher) {
     let message = Message::from(str);
 
     b.iter(|| {
-        for param in message.params().unwrap().iter() {
+        for param in message.params().unwrap() {
             assert_eq!(param, "param")
         }
-    });
-}
-
-#[bench]
-fn bench_params_create(b: &mut Bencher) {
-    let mut str = String::new();
-    for _ in 0..100 {
-        str.push_str(" param");
-    }
-
-    b.iter(|| {
-        let params = Params::from(str.as_str());
-        assert_eq!(params.as_ref(), str.as_str());
     });
 }

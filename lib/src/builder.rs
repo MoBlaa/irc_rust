@@ -1,30 +1,98 @@
+use crate::errors::ParserError;
+use crate::parsed::Parsed;
+use crate::Message;
 use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::str::FromStr;
 
-/// A MessageBuilder for a simpler generation of a message instead of building an string first.
+/// A Message Builder for a simpler generation of a message instead of building a string first.
+///
+/// # Examples
+///
+/// To build a simple message from scratch:
+///
+/// ```rust
+/// use irc_rust::Message;
+/// use std::error::Error;
+///
+/// # fn main() -> Result<(), irc_rust::errors::ParserError> {
+/// let message = Message::builder("CMD")
+///     .tag("key1", "value1")
+///     .tag("key2", "value2")
+///     .prefix("name", Some("user"), Some("host"))
+///     .param("param1").param("param2")
+///     .trailing("trailing")
+///     .build();
+///
+/// let mut tags = message.tags()?;
+/// let (key, value) = tags.next().unwrap()?;
+/// println!("{}={}", key, value); // Prints 'key1=value1'
+/// # Ok(())
+/// # }
+/// ```
+///
+/// To alter an existing message:
+///
+/// ```rust
+/// use irc_rust::Message;
+/// use std::error::Error;
+/// use irc_rust::builder::Builder;
+///
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// let message = Message::from("@key=value :name!user@host CMD param1 :trailing!").to_builder()?
+///     .tag("key", "value2")
+///     .param("param2")
+///     .param("param4")
+///     .set_param(1, "param3")
+///     .build();
+///
+/// // Or
+/// let message: Message = "@key=value :name!user@host CMD param1 :trailing!".parse::<Builder>()?
+///     .tag("key", "value2")
+///     .param("param2")
+///     .param("param4")
+///     .set_param(1, "param3")
+///     .build();
+///
+/// assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
+/// Ok(())
+/// # }
+/// ```
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
-pub struct Message<'a> {
-    tags: HashMap<&'a str, &'a str>,
-    prefix_name: Option<&'a str>,
-    prefix_user: Option<&'a str>,
-    prefix_host: Option<&'a str>,
-    command: &'a str,
-    params: Vec<&'a str>,
-    trailing: Option<&'a str>,
+pub struct Builder {
+    tags: HashMap<String, String>,
+    prefix_name: Option<String>,
+    prefix_user: Option<String>,
+    prefix_host: Option<String>,
+    command: String,
+    params: Vec<String>,
+    trailing: Option<String>,
 }
 
-impl<'a> Message<'a> {
+impl Builder {
     /// Creates a new empty builder.
-    pub fn new(command: &'a str) -> Self {
-        Message {
+    ///
+    /// # Usage
+    ///
+    /// ```rust
+    /// use irc_rust::builder::Builder;
+    /// # fn main() -> Result<(), irc_rust::errors::ParserError> {
+    /// let message = Builder::new("CMD").build();
+    /// assert_eq!("CMD", message.command()?);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn new<S: ToString>(command: S) -> Self {
+        Builder {
             tags: HashMap::new(),
             prefix_name: None,
             prefix_user: None,
             prefix_host: None,
-            command: "",
+            command: "".to_string(),
             params: Vec::new(),
             trailing: None,
         }
-        .command(command)
+        .command(command.to_string())
     }
 
     /// Set the command.
@@ -32,7 +100,8 @@ impl<'a> Message<'a> {
     /// # Panics
     ///
     /// Panics if **cmd** is empty.
-    pub fn command(mut self, cmd: &'a str) -> Message<'a> {
+    pub fn command<S: ToString>(mut self, cmd: S) -> Builder {
+        let cmd = cmd.to_string();
         if cmd.is_empty() {
             panic!("tried to set empty command");
         }
@@ -45,11 +114,12 @@ impl<'a> Message<'a> {
     /// # Panics
     ///
     /// Panics if **key** is empty. **value** is allowed to be empty.
-    pub fn tag(mut self, key: &'a str, value: &'a str) -> Message<'a> {
+    pub fn tag<SK: ToString, SV: ToString>(mut self, key: SK, value: SV) -> Builder {
+        let key = key.to_string();
         if key.is_empty() {
             panic!("tried to set tag with empty key");
         }
-        self.tags.insert(key, value);
+        self.tags.insert(key, value.to_string());
         self
     }
 
@@ -58,19 +128,22 @@ impl<'a> Message<'a> {
     /// # Panics
     ///
     /// Panics if **name** is empty, **user or host** == **Some("")** or **user** is some and **host** is none.
-    pub fn prefix(
-        mut self,
-        name: &'a str,
-        user: Option<&'a str>,
-        host: Option<&'a str>,
-    ) -> Message<'a> {
+    pub fn prefix<SN, SU, SH>(mut self, name: SN, user: Option<SU>, host: Option<SH>) -> Builder
+    where
+        SN: ToString,
+        SU: ToString,
+        SH: ToString,
+    {
+        let name = name.to_string();
         if name.is_empty() {
             panic!("tried to set empty prefix name");
         }
-        if user.is_some() && user.unwrap().is_empty() {
+        let user = user.map(|user| user.to_string());
+        if user.is_some() && user.as_ref().unwrap().is_empty() {
             panic!("tried to set empty prefix user");
         }
-        if host.is_some() && host.unwrap().is_empty() {
+        let host = host.map(|host| host.to_string());
+        if host.is_some() && host.as_ref().unwrap().is_empty() {
             panic!("tried to set empty prefix host");
         }
         if user.is_some() && host.is_none() {
@@ -87,7 +160,8 @@ impl<'a> Message<'a> {
     /// # Panics
     ///
     /// Panics if **param** is empty.
-    pub fn param(mut self, param: &'a str) -> Message<'a> {
+    pub fn param<S: ToString>(mut self, param: S) -> Builder {
+        let param = param.to_string();
         if param.is_empty() {
             panic!("tried to add empty param");
         }
@@ -102,18 +176,20 @@ impl<'a> Message<'a> {
     /// # Panics
     ///
     /// Panics if **param** is empty.
-    pub fn set_param(mut self, index: usize, param: &'a str) -> Message<'a> {
+    pub fn set_param<S: ToString>(mut self, index: usize, param: S) -> Builder {
+        let param = param.to_string();
         if param.is_empty() {
             panic!("tried to set empty param");
         }
         if index >= self.params.len() {
             self.params.push(param);
+        } else {
+            self.params[index] = param;
         }
-        self.params[index] = param;
         self
     }
 
-    pub fn remove_param(mut self, index: usize) -> Message<'a> {
+    pub fn remove_param(mut self, index: usize) -> Builder {
         if index < self.params.len() {
             self.params.remove(index);
         }
@@ -121,8 +197,8 @@ impl<'a> Message<'a> {
     }
 
     //( Add a trailing param;
-    pub fn trailing(mut self, trailing: &'a str) -> Message<'a> {
-        self.trailing = Some(trailing);
+    pub fn trailing<S: ToString>(mut self, trailing: S) -> Builder {
+        self.trailing = Some(trailing.to_string());
         self
     }
 
@@ -132,9 +208,9 @@ impl<'a> Message<'a> {
         if !self.tags.is_empty() {
             str.push('@');
             for (key, val) in self.tags {
-                str.push_str(key);
+                str.push_str(key.as_str());
                 str.push('=');
-                str.push_str(val);
+                str.push_str(val.as_str());
                 str.push(';')
             }
             str.pop();
@@ -142,28 +218,61 @@ impl<'a> Message<'a> {
         }
         if let Some(prefix_name) = self.prefix_name {
             str.push(':');
-            str.push_str(prefix_name);
+            str.push_str(prefix_name.as_str());
             // Asserting as checked in setters.
             assert!(self.prefix_user.is_none() || self.prefix_host.is_some());
             if let Some(user) = self.prefix_user {
                 str.push('!');
-                str.push_str(user);
+                str.push_str(user.as_str());
             }
             if let Some(host) = self.prefix_host {
                 str.push('@');
-                str.push_str(host);
+                str.push_str(host.as_str());
             }
             str.push(' ')
         }
-        str.push_str(self.command);
+        str.push_str(self.command.as_str());
         if !self.params.is_empty() {
             str.push(' ');
             str.push_str(&self.params.join(" "));
         }
         if let Some(trailing) = self.trailing {
             str.push_str(" :");
-            str.push_str(trailing);
+            str.push_str(trailing.as_str());
         }
         crate::message::Message::from(str)
+    }
+}
+
+impl FromStr for Builder {
+    type Err = ParserError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parsed = Parsed::try_from(s)?;
+
+        let mut builder = Builder::new(parsed.command().ok_or(ParserError::NoCommand)?);
+        for (key, value) in parsed.tags() {
+            builder = builder.tag(key, value)
+        }
+        if let Some(&(name, user, host)) = parsed.prefix() {
+            builder = builder.prefix(name, user, host);
+        }
+        // Flatten to remove empty params
+        for param in parsed.params().flatten() {
+            builder = builder.param(param);
+        }
+        if let Some(trailing) = parsed.trailing() {
+            builder = builder.trailing(trailing);
+        }
+
+        Ok(builder)
+    }
+}
+
+impl TryFrom<Message> for Builder {
+    type Error = ParserError;
+
+    fn try_from(value: Message) -> Result<Self, Self::Error> {
+        value.to_builder()
     }
 }

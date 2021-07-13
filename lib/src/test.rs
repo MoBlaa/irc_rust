@@ -1,8 +1,9 @@
+use crate::errors::ParserError;
 use crate::message::Message;
-use crate::InvalidIrcFormatError;
+use std::error::Error;
 
 #[test]
-fn test_parse() {
+fn test_parse() -> Result<(), Box<dyn Error>> {
     let message =
         Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 
@@ -11,69 +12,65 @@ fn test_parse() {
         "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing"
     );
 
-    let tags = message.tags().unwrap().unwrap();
-    let val = &tags["key1"];
-    assert_eq!(val, "value1");
-    let val = &tags["key2"];
-    assert_eq!(val, "value2");
+    let parsed = message.parse()?;
 
-    let mut tags = message.tags().unwrap().unwrap().iter();
+    let val = parsed.tag("key1");
+    assert_eq!(val, Some("value1"));
+    let val = parsed.tag("key2");
+    assert_eq!(val, Some("value2"));
+
+    let mut tags = parsed.tags();
     let (key, val) = tags.next().unwrap();
-    assert_eq!(key, "key1");
-    assert_eq!(val, "value1");
-    let (key, val) = tags.next().unwrap();
-    assert_eq!(key, "key2");
-    assert_eq!(val, "value2");
+    let (key2, val2) = tags.next().unwrap();
+    assert!(
+        (*key == "key1" && *val == "value1" && *key2 == "key2" && *val2 == "value2")
+            || (*key2 == "key1" && *val2 == "value1" && *key == "key2" && *val == "value2")
+    );
 
-    let prefix = message.prefix().unwrap().unwrap();
-    assert_eq!(prefix.name(), "name");
-    assert_eq!(prefix.user().unwrap(), "user");
-    assert_eq!(prefix.host().unwrap(), "host");
+    let (name, user, host) = message.prefix()?.unwrap();
+    assert_eq!(name, "name");
+    assert_eq!(user, Some("user"));
+    assert_eq!(host, Some("host"));
 
-    assert_eq!(message.command(), "CMD");
+    assert_eq!(message.command()?, "CMD");
 
-    let params = message.params().unwrap();
-    let mut iter = params.iter();
-    assert_eq!(iter.next().unwrap(), "param1");
-    assert_eq!(iter.next().unwrap(), "param2");
+    let mut iter = message.params()?.into_iter();
+    assert_eq!(iter.next(), Some("param1"));
+    assert_eq!(iter.next(), Some("param2"));
     assert!(iter.next().is_none());
-    assert_eq!(params.trailing().unwrap(), "trailing");
+    assert_eq!(parsed.trailing(), Some("trailing"));
+
+    Ok(())
 }
 
 #[test]
-fn test_tags() {
+fn test_tags() -> Result<(), Box<dyn Error>> {
     let message = Message::from("@tag1=value1;tag2=value2 CMD");
 
-    let tags = message.tags().unwrap().unwrap();
-    let val = &tags["tag1"];
-    assert_eq!(val, "value1");
-    let val = &tags["tag2"];
-    assert_eq!(val, "value2");
-
-    let mut tags = tags.iter();
-    let (key, val) = tags.next().unwrap();
+    let mut tags = message.tags()?.into_iter();
+    let (key, val) = tags.next().unwrap()?;
     assert_eq!(key, "tag1");
     assert_eq!(val, "value1");
-    let (key, val) = tags.next().unwrap();
+    let (key, val) = tags.next().unwrap()?;
     assert_eq!(key, "tag2");
     assert_eq!(val, "value2");
     assert!(tags.next().is_none());
 
     let message = Message::from("@tag1=value1 CMD");
 
-    let mut tags = message.tags().unwrap().unwrap().iter();
-    let (key, val) = tags.next().unwrap();
+    let mut tags = message.tags()?.into_iter();
+    let (key, val) = tags.next().unwrap()?;
     assert_eq!(key, "tag1");
     assert_eq!(val, "value1");
     assert!(tags.next().is_none());
 
     let message = Message::from("@tag1=value1;tag2=value2 :name CMD :trailing");
 
-    let mut tags = message.tags().unwrap().unwrap().iter();
-    let (key, val) = tags.next().unwrap();
+    let mut tags = message.tags()?.into_iter();
+    let (key, val) = tags.next().unwrap()?;
     assert_eq!(key, "tag1");
     assert_eq!(val, "value1");
-    let (key, val) = tags.next().unwrap();
+    let (key, val) = tags.next().unwrap()?;
     assert_eq!(key, "tag2");
     assert_eq!(val, "value2");
     assert!(tags.next().is_none());
@@ -82,105 +79,119 @@ fn test_tags() {
 
     let message = Message::from("@tag1=value1;tag2=value2 CMD :trailing");
 
-    let mut tags = message.tags().unwrap().unwrap().iter();
-    let (key, val) = tags.next().unwrap();
+    let mut tags = message.tags()?.into_iter();
+    let (key, val) = tags.next().unwrap()?;
     assert_eq!(key, "tag1");
     assert_eq!(val, "value1");
-    let (key, val) = tags.next().unwrap();
+    let (key, val) = tags.next().unwrap()?;
     assert_eq!(key, "tag2");
     assert_eq!(val, "value2");
     assert!(tags.next().is_none());
 
     assert!(message.prefix().unwrap().is_none());
+
+    Ok(())
 }
 
 #[test]
-fn test_without_prefix() {
+fn test_without_prefix() -> Result<(), Box<dyn Error>> {
     let message = Message::from("CMD param1 param2 :trailing");
 
-    let prefix = message.prefix();
-    assert!(prefix.unwrap().is_none());
+    let prefix = message.prefix()?;
+    assert!(prefix.is_none());
 
-    assert_eq!(message.command(), "CMD");
+    assert_eq!(message.command()?, "CMD");
 
-    let params = message.params().unwrap();
-    let mut iter = params.iter();
-    assert_eq!(iter.next().unwrap(), "param1");
-    assert_eq!(iter.next().unwrap(), "param2");
+    let mut iter = message.params()?.into_iter();
+    assert_eq!(iter.next(), Some("param1"));
+    assert_eq!(iter.next(), Some("param2"));
     assert!(iter.next().is_none());
 
-    assert_eq!(params.trailing().unwrap(), "trailing")
+    assert_eq!(message.trailing()?, Some("trailing"));
+
+    Ok(())
 }
 
 #[test]
-fn test_command_only() {
+fn test_command_only() -> Result<(), Box<dyn Error>> {
     let message = Message::from("CMD");
 
-    assert!(message.prefix().unwrap().is_none());
+    assert!(message.prefix()?.is_none());
 
-    assert_eq!(message.command(), "CMD");
+    assert_eq!(message.command()?, "CMD");
 
-    assert!(message.params().is_none());
+    assert!(message.params()?.next().is_none());
+
+    Ok(())
 }
 
 #[test]
-fn test_cmd_and_trailing() {
+fn test_cmd_and_trailing() -> Result<(), Box<dyn Error>> {
     let message = Message::from("CMD :trailing");
 
-    assert!(message.prefix().unwrap().is_none());
+    assert!(message.prefix()?.is_none());
 
-    assert_eq!(message.command(), "CMD");
+    assert_eq!(message.command()?, "CMD");
 
-    let params = message.params().unwrap();
-    let mut iter = params.iter();
+    let mut iter = message.params()?;
     assert!(iter.next().is_none());
 
-    assert_eq!(params.trailing().unwrap(), "trailing")
+    assert_eq!(message.trailing()?, Some("trailing"));
+
+    Ok(())
 }
 
 #[test]
-fn test_cmd_and_param() {
+fn test_cmd_and_param() -> Result<(), Box<dyn Error>> {
     let message = Message::from("CMD param1");
 
-    assert!(message.prefix().unwrap().is_none());
+    assert!(message.prefix()?.is_none());
 
-    assert_eq!(message.command(), "CMD");
+    assert_eq!(message.command()?, "CMD");
 
-    let params = message.params().unwrap();
-    let mut iter = params.iter();
-    assert_eq!(iter.next().unwrap(), "param1");
+    let mut iter = message.params()?;
+    assert_eq!(iter.next(), Some("param1"));
     assert!(iter.next().is_none());
 
-    assert!(params.trailing().is_none());
+    assert!(message.trailing()?.is_none());
+
+    Ok(())
 }
 
 #[test]
-fn test_prefix() {
+fn test_prefix() -> Result<(), Box<dyn Error>> {
     let message = Message::from(":name CMD");
 
-    let prefix = message.prefix().unwrap().unwrap();
-    assert_eq!(prefix.name(), "name");
-    assert!(prefix.user().is_none());
-    assert!(prefix.host().is_none());
+    let prefix = message.prefix()?;
+    assert!(prefix.is_some());
+    let (name, user, host) = prefix.unwrap();
+    assert_eq!(name, "name");
+    assert!(user.is_none());
+    assert!(host.is_none());
 
-    assert_eq!(message.command(), "CMD");
+    assert_eq!(message.command()?, "CMD");
 
-    assert!(message.params().is_none());
+    let next_param = message.params()?.next();
+    assert!(next_param.is_none(), "{:?}", next_param);
 
     let message = Message::from(":name@host CMD");
 
-    let prefix = message.prefix().unwrap().unwrap();
-    assert_eq!(prefix.name(), "name");
-    assert!(prefix.user().is_none());
-    assert_eq!(prefix.host().unwrap(), "host");
+    let prefix = message.prefix()?;
+    assert!(prefix.is_some());
+    let (name, user, host) = prefix.unwrap();
+    assert_eq!(name, "name");
+    assert!(user.is_none());
+    assert_eq!(host, Some("host"));
 
-    assert_eq!(message.command(), "CMD");
+    assert_eq!(message.command()?, "CMD");
 
-    assert!(message.params().is_none());
+    assert!(message.params()?.next().is_none());
+
+    Ok(())
 }
 
 #[test]
-fn test_message_builder() -> Result<(), InvalidIrcFormatError> {
+fn test_message_builder() -> Result<(), ParserError> {
     let message = Message::builder("CMD")
         .tag("key1", "value1")
         .tag("key2", "value2")

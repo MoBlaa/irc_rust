@@ -43,11 +43,12 @@
 //! use irc_rust::Message;
 //! use std::io::{BufRead, stdin};
 //!
+//! # fn main() -> Result<(), irc_rust::errors::ParserError> {
 //! for line in stdin().lock().lines() {
 //!     match line {
 //!         Ok(line) => {
 //!             let message = Message::from(line);
-//!             println!("> Received command: {}", message.command());
+//!             println!("> Received command: {}", message.command()?);
 //!         }
 //!         Err(e) => {
 //!             println!("got error; aborting: {}", e);
@@ -55,26 +56,22 @@
 //!         }
 //!     }
 //! }
-//!
+//! # Ok::<(), irc_rust::errors::ParserError>(())
+//! # }
 //! ```
 
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde;
 
-mod builder;
-mod errors;
-mod message;
-mod params;
-mod prefix;
-mod tags;
+pub mod builder;
+pub mod errors;
+pub mod message;
+pub mod parsed;
+pub mod prefix;
+pub mod tokenizer;
 
 #[cfg(test)]
 mod test;
 
-pub use builder::Message as MessageBuilder;
-pub use errors::InvalidIrcFormatError;
 pub use message::Message;
-pub use params::Params;
-pub use prefix::Prefix;
-pub use tags::Tags;

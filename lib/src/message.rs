@@ -1,12 +1,13 @@
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
-use crate::builder::Message as MessageBuilder;
-use crate::errors::InvalidIrcFormatError;
-use crate::params::Params;
+use crate::builder::Builder as MessageBuilder;
+use crate::errors::ParserError;
+use crate::parsed::Parsed;
 use crate::prefix::Prefix;
-use crate::tags::Tags;
+use crate::tokenizer::{PartialCfg, Start, Tokenizer};
 use std::convert::TryFrom;
+use std::str::FromStr;
 
 /// A simple irc message containing tags, prefix, command, parameters and a trailing parameter.
 ///
@@ -21,51 +22,20 @@ use std::convert::TryFrom;
 /// ```rust
 /// use irc_rust::Message;
 ///
+/// # fn main() -> Result<(), irc_rust::errors::ParserError> {
 /// let message = Message::from("@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
 ///
+/// // Or
+///
+/// let message = "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing"
+///     .parse::<Message>()?;
+///
 /// assert_eq!(message.to_string(), "@key1=value1;key2=value2 :name!user@host CMD param1 param2 :trailing");
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// To build a message in a verbose and easy to read way you can use the `Message::builder` method and the `MessageBuilder`.
-///
-/// ```rust
-/// use irc_rust::Message;
-/// use std::error::Error;
-///
-/// fn main() -> Result<(), Box<dyn Error>> {
-///     let message = Message::builder("CMD")
-///         .tag("key1", "value1")
-///         .tag("key2", "value2")
-///         .prefix("name", Some("user"), Some("host"))
-///         .param("param1").param("param2")
-///         .trailing("trailing")
-///         .build();
-///
-///     let tags = message.tags().unwrap().unwrap();
-///     println!("key1={}", &tags["key1"]); // Prints 'key1=value1'
-///     Ok(())
-/// }
-/// ```
-///
-/// You can create a new message from an existing message by calling the `to_builder` method.
-/// To alter existing parameters the `set_param` method can be used.
-///
-/// ```rust
-/// use irc_rust::Message;
-/// use std::error::Error;
-///
-/// fn main() -> Result<(), Box<dyn Error>> {
-///     let message = Message::from("@key=value :name!user@host CMD param1 :trailing!").to_builder()?
-///     .tag("key", "value2")
-///     .param("param2")
-///     .param("param4")
-///     .set_param(1, "param3")
-///     .build();
-///
-///     assert_eq!(message.to_string(), "@key=value2 :name!user@host CMD param1 param3 param4 :trailing!");
-///     Ok(())
-/// }
-/// ```
 #[derive(Debug, Clone, Eq, Ord, PartialOrd, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Message {
@@ -73,6 +43,46 @@ pub struct Message {
 }
 
 impl Message {
+    /// Returns a fully parsed but zero-copy struct referencing the parsed message.
+    pub fn parse(&self) -> Result<Parsed, ParserError> {
+        Parsed::try_from(self.raw.as_str())
+    }
+
+    /// Returns a query instance to partially parse the message.
+    ///
+    /// # Usage
+    ///
+    /// ```rust
+    /// use irc_rust::Message;
+    /// use irc_rust::tokenizer::PartialCfg;
+    /// use std::collections::HashSet;
+    /// use std::iter::FromIterator;
+    /// # fn main() -> Result<(), irc_rust::errors::ParserError> {
+    /// let message = "@tag1=value1;tag2=value2 CMD param0 param1 :trailing"
+    ///     .parse::<Message>()?;
+    /// let parsed = message.parse_partial(PartialCfg {
+    ///         tags: HashSet::from_iter(vec!["tag2"]),
+    ///         params: vec![1],
+    ///         trailing: true,
+    ///         ..PartialCfg::default()
+    ///     })?;
+    /// assert_eq!(Some("CMD"), parsed.command());
+    /// assert!(parsed.tag("tag1").is_none());
+    /// assert!(parsed.prefix().is_none());
+    /// assert_eq!(Some("value2"), parsed.tag("tag2"));
+    /// assert_eq!(Some("param1"), parsed.param(1));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn parse_partial<'a>(&'a self, cfg: PartialCfg<'a>) -> Result<Parsed<'a>, ParserError> {
+        Tokenizer::new(self.raw.as_str())?.parse_partial(cfg)
+    }
+
+    /// Returns a tokenizer over the message. Can be used to implement a custom parsing algorithm.
+    pub fn tokenizer(&self) -> Result<Tokenizer<Start>, ParserError> {
+        Tokenizer::new(self.raw.as_str())
+    }
+
     /// Creates a message builder as alternative to building an irc string before creating the message.
     pub fn builder(command: &str) -> MessageBuilder {
         MessageBuilder::new(command)
@@ -80,105 +90,49 @@ impl Message {
 
     /// Creates a builder from this message. Only initializes fields already present in the message.
     /// By using this method a whole new Message will be created.
-    pub fn to_builder(&self) -> Result<MessageBuilder<'_>, InvalidIrcFormatError> {
-        let mut builder = MessageBuilder::new(self.command());
-        if let Some(tags) = self.tags()? {
-            for (key, value) in tags.iter() {
-                builder = builder.tag(key, value)
-            }
-        }
-        if let Some(prefix) = self.prefix()? {
-            let (name, user, host) = prefix.into_parts();
-            builder = builder.prefix(name, user, host);
-        }
-        builder = builder.command(self.command());
-        if let Some(params) = self.params() {
-            let (params, trailing) = params.into_parts();
-            if let Some(trailing) = trailing {
-                builder = builder.trailing(trailing);
-            }
-            for param in params {
-                builder = builder.param(param);
-            }
-        }
-
-        Ok(builder)
+    pub fn to_builder(&self) -> Result<MessageBuilder, ParserError> {
+        MessageBuilder::from_str(self.raw.as_str())
     }
 
     /// Returns tags if any are present.
-    pub fn tags(&self) -> Result<Option<Tags>, InvalidIrcFormatError> {
-        if self.raw.starts_with('@') {
-            let end = self.raw.find(' ');
-            if let Some(end) = end {
-                Tags::try_from(&self.raw[1..end]).map(Some)
-            } else {
-                Err(InvalidIrcFormatError::NoTagEnd(self.raw.clone()))
-            }
-        } else {
-            Ok(None)
-        }
+    pub fn tags(
+        &self,
+    ) -> Result<impl Iterator<Item = Result<(&str, &str), ParserError>>, ParserError> {
+        Tokenizer::new(self.raw.as_str()).map(|tokenizer| tokenizer.tags().into_iter())
     }
 
     /// Returns the Prefix if present.
-    pub fn prefix(&self) -> Result<Option<Prefix>, InvalidIrcFormatError> {
-        let offset = self
-            .tags()
-            // Set offset if tags exist
-            .map(|tags| {
-                // + '@' + ' '
-                tags.map(|tags| tags.len_raw() + 2)
-            })?
-            .unwrap_or(0);
-        Ok(match self.raw.chars().nth(offset) {
-            Some(':') => match self.raw[offset..].find(' ') {
-                Some(index) => Some(Prefix::from(&self.raw[offset + 1..offset + index])),
-                None => Some(Prefix::from(&self.raw[offset + 1..])),
-            },
-            _ => None,
-        })
+    pub fn prefix(&self) -> Result<Option<Prefix>, ParserError> {
+        Tokenizer::new(self.raw.as_str()).and_then(|tokenizer| tokenizer.prefix().parts())
     }
 
     /// Returns the command the message represents.
-    pub fn command(&self) -> &str {
-        let without_tags = match self.raw.find(' ') {
-            Some(start) => {
-                if self.raw.starts_with('@') {
-                    &self.raw[start + 1..]
-                } else {
-                    &self.raw
-                }
-            }
-            None => &self.raw,
-        };
-        let without_prefix = match without_tags.find(' ') {
-            Some(start) => {
-                if without_tags.starts_with(':') {
-                    &without_tags[start + 1..]
-                } else {
-                    without_tags
-                }
-            }
-            None => &self.raw,
-        };
-        match without_prefix.find(' ') {
-            Some(end) => &without_prefix[..end],
-            None => without_prefix,
-        }
+    pub fn command(&self) -> Result<&str, ParserError> {
+        Tokenizer::new(self.raw.as_str()).and_then(|tokenizer| tokenizer.command().command())
     }
 
     /// Returns the params if any are present.
-    pub fn params(&self) -> Option<Params> {
-        let command = self.command();
-        let cmd_start = self.raw.find(command).unwrap();
-        self.raw[cmd_start..]
-            .find(' ')
-            .map(|param_start| Params::from(&self.raw[cmd_start + param_start..]))
+    pub fn params(&self) -> Result<impl Iterator<Item = &str>, ParserError> {
+        Tokenizer::new(self.raw.as_str()).map(|tokenizer| tokenizer.params().into_iter())
+    }
+
+    /// Returns the trailing parameter if any is present.
+    pub fn trailing(&self) -> Result<Option<&str>, ParserError> {
+        Tokenizer::new(self.raw.as_str()).map(|tokenizer| tokenizer.trailing().trailing())
     }
 }
 
 impl Display for Message {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.raw.fmt(f)
+    }
+}
+
+impl FromStr for Message {
+    type Err = ParserError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Message::from(s.to_string()))
     }
 }
 
@@ -216,9 +170,10 @@ mod tests {
         let message =
             Message::from("@test=test :user@prefix!host COMMAND param :trailing".to_string());
         let tags = message.tags();
-        assert!(tags.is_ok(), "{:?}", tags);
-        let tags = tags.unwrap();
-        assert!(tags.is_some(), "{:?}", tags);
+        assert!(tags.is_ok(), "{:?}", tags.err());
+        let mut tags = tags.unwrap().into_iter();
+        let tag = tags.next();
+        assert!(tag.is_some(), "{:?}", tag);
     }
 
     #[test]
